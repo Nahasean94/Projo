@@ -1,31 +1,42 @@
 package controllers;
 
 
+import database.DatabaseOperations;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.DatePicker;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
+import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
+import java.sql.Date;
+import java.util.ArrayList;
+
 
 public class Controller {
+    @FXML
+    private ListView projectTitles;
+    @FXML
+    private ListView noteTitles;
+    @FXML
+
+
+    private DatabaseOperations databaseOperations = new DatabaseOperations();
+
+    public Controller() {
+    }
 
     @FXML
-    public Button saveProject;
-    @FXML
-    public Button saveNote;
-    @FXML
-    private TextField projectTitle;
-    @FXML
-    private TextField noteTitle;
-    @FXML
-    private DatePicker due;
+    public void initialize() {
+        fetchProjectTitles();
+        fetchNoteTitles();
+    }
 
     /**
      * event handler for new project menu item
@@ -43,6 +54,7 @@ public class Controller {
             e.printStackTrace();
         }
     }
+
     /**
      * event handler for new note menu item
      */
@@ -61,67 +73,37 @@ public class Controller {
     }
 
     /**
-     * Event handler for cancel new Project dialog
+     * Fetch project titles
      */
-
-    public void onCancelNewProject(ActionEvent e) {
-        final Node source = (Node) e.getSource();
-        final Stage stage = (Stage) source.getScene().getWindow();
-        stage.close();
+    @FXML
+    private void fetchProjectTitles() {
+        ArrayList arrayList = databaseOperations.loadProjectTitles();
+            try {
+                ObservableList observableList = FXCollections.observableArrayList(arrayList);
+                projectTitles.setItems(observableList);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
     }
 
     /**
-     * Event handler for save new Project dialog
+     * Fetch project titles
      */
-
-    public void onSaveNewProject(ActionEvent e) {
-        System.out.println(projectTitle.getText() + due.getValue());
-        final Node source = (Node) e.getSource();
-        final Stage stage = (Stage) source.getScene().getWindow();
-        stage.close();
-    }
-
-    /**
-     * Enable save button
-     */
-
-    public void enableSaveProjectButton() {
-        if (!projectTitle.getText().trim().equals("")) {
-            saveProject.setDisable(false);
-        }else{
-            saveProject.setDisable(true);
-        }
+    @FXML
+    private void fetchNoteTitles() {
+        ArrayList arrayList = databaseOperations.loadNoteTitles();
+            try {
+                ObservableList observableList = FXCollections.observableArrayList(arrayList);
+                noteTitles.setItems(observableList);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
     }
     /**
-     * Event handler for cancel new Note dialog
+     * Fetch project titles
      */
 
-    public void onCancelNewNote(ActionEvent e) {
-        final Node source = (Node) e.getSource();
-        final Stage stage = (Stage) source.getScene().getWindow();
-        stage.close();
-    }
-
-    /**
-     * Event handler for save new Project dialog
-     */
-
-    public void onSaveNewNote(ActionEvent e) {
-        System.out.println(noteTitle.getText());
-        final Node source = (Node) e.getSource();
-        final Stage stage = (Stage) source.getScene().getWindow();
-        stage.close();
-    }
-
-    /**
-     * Enable save button
-     */
-
-    public void enableSaveNoteButton() {
-        if (!noteTitle.getText().trim().equals("")) {
-            saveNote.setDisable(false);
-        }else{
-            saveNote.setDisable(true);
-        }
+    public void addProjectTitleToList(String title) {
+       projectTitles.getItems().add(title);
     }
 }

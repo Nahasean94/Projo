@@ -1,7 +1,10 @@
 package database;
 
 
+import controllers.Controller;
+
 import java.sql.*;
+import java.util.ArrayList;
 
 public class DatabaseOperations {
     /**
@@ -25,18 +28,57 @@ public class DatabaseOperations {
     }
 
     /**
-     * Insert a new row into the warehouses table
+     * Create new project
      *
      * @param name
      * @param due
      */
-    public void createNewProject(String name, Date due) {
-        String sql = "INSERT INTO PROJECTS(ID,DESCRIPTION,DUE,DATE_CREATED) VALUES (DEFAULT,?,?,DEFAULT )";
+    public String createNewProject(String name, Date due) {
+        String projectName="";
+        String sql = "INSERT INTO PROJECTS(DUE,NAME) VALUES (?,?)";
         try (Connection conn = this.connect();
-             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            preparedStatement.setString(1, name);
-            preparedStatement.setDate(2, due);
+             PreparedStatement preparedStatement = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            preparedStatement.setDate(1, due);
+            preparedStatement.setString(2, name);
             preparedStatement.executeUpdate();
+            ResultSet rs = preparedStatement.getGeneratedKeys();
+            if (rs.next()) {
+//                System.out.println(rs.getInt(1));
+                int id=rs.getInt(1);
+                System.out.println(id);
+                String sql2 = "SELECT * FROM PROJECTS WHERE ID=?";
+                try (Connection conn2 = this.connect();
+                     PreparedStatement preparedStatement2 = conn2.prepareStatement(sql2)) {
+                    preparedStatement2.setInt(1,id);
+                    ResultSet rs2 = preparedStatement2.executeQuery();
+                    if (rs2.next()) {
+                        projectName= rs2.getString("NAME");
+                    }
+                } catch (SQLException e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+        return projectName;
+    }
+
+    /**
+     * Create a new project
+     *
+     * @param name
+     */
+    public void createNewProject(String name) {
+        String sql = "INSERT INTO PROJECTS(NAME) VALUES (?)";
+        try (Connection conn = this.connect();
+             PreparedStatement preparedStatement = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            preparedStatement.setString(1, name);
+            preparedStatement.executeUpdate();
+            ResultSet rs = preparedStatement.getGeneratedKeys();
+            if (rs.next()) {
+                System.out.println(rs.getInt(1));
+            }
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
@@ -308,7 +350,7 @@ public class DatabaseOperations {
      *
      * @param title
      */
-    private void createNote(String title) {
+    public void createNote(String title) {
         String sql = "INSERT INTO NOTES(ID,TITLE,DATE_CREATED) VALUES (DEFAULT,?,DEFAULT )";
         try (Connection conn = this.connect();
              PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
@@ -325,23 +367,23 @@ public class DatabaseOperations {
      * @param noteID
      * @param title
      */
-    private void editNoteTitle(int noteID, String title) {
+    public void editNoteTitle(int noteID, String title) {
         String sql = "UPDATE NOTES SET TITLE=? WHERE ID=?";
         edit(noteID, title, sql);
     }
+
     /**
      * Edit note title
      *
      * @param noteID
      * @param body
      */
-    private void editNoteBody(int noteID, String body) {
+    public void editNoteBody(int noteID, String body) {
         String sql = "UPDATE NOTES SET BODY=? WHERE ID=?";
         edit(noteID, body, sql);
     }
 
     /**
-     *
      * @param id
      * @param body
      * @param sql
@@ -358,11 +400,10 @@ public class DatabaseOperations {
     }
 
     /**
-     *
      * @param id
      */
-    private void trashNote(int id) {
-        String sql="UPDATE NOTES SET TRASHED=? WHERE ID=?";
+    public void trashNote(int id) {
+        String sql = "UPDATE NOTES SET TRASHED=? WHERE ID=?";
         trash(id, sql);
     }
 
@@ -379,16 +420,17 @@ public class DatabaseOperations {
 
     /**
      * Restore a deleted note
+     *
      * @param id
      */
-    private void restoreNote(int id) {
-        String sql="UPDATE NOTES SET TRASHED=? WHERE ID=?";
+    public void restoreNote(int id) {
+        String sql = "UPDATE NOTES SET TRASHED=? WHERE ID=?";
         try (Connection conn = this.connect();
              PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
             preparedStatement.setInt(1, 0);
             preparedStatement.setInt(2, id);
             preparedStatement.executeUpdate();
-            String sql2="DELETE FROM TRASH_NOTES WHERE ID=?";
+            String sql2 = "DELETE FROM TRASH_NOTES WHERE ID=?";
             try (Connection conn2 = this.connect();
                  PreparedStatement preparedStatement2 = conn2.prepareStatement(sql2)) {
                 preparedStatement2.setInt(1, id);
@@ -404,8 +446,8 @@ public class DatabaseOperations {
     /**
      * Empty notes trash
      */
-    private void emptyNotesTrash() {
-        String sql="DELETE FROM TRASH_NOTES";
+    public void emptyNotesTrash() {
+        String sql = "DELETE FROM TRASH_NOTES";
         try (Connection conn = this.connect();
              PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
             preparedStatement.executeUpdate();
@@ -414,7 +456,46 @@ public class DatabaseOperations {
         }
     }
 
+    /**
+     * Fetch all project tiles
+     */
+    public ArrayList loadProjectTitles() {
+        String sql = "SELECT * FROM PROJECTS";
+        ResultSet resultSet = null;
+        ArrayList arrayList = new ArrayList();
 
+        try (Connection conn = this.connect();
+             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            resultSet = preparedStatement.executeQuery();
+            while (resultSet.next()) {
+                String name = resultSet.getString("NAME");
+                int id = resultSet.getInt("ID");
+                arrayList.add(name);
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+        return arrayList;
+    }
+
+    public ArrayList loadNoteTitles() {
+        String sql = "SELECT * FROM NOTES";
+        ResultSet resultSet = null;
+        ArrayList arrayList = new ArrayList();
+
+        try (Connection conn = this.connect();
+             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            resultSet = preparedStatement.executeQuery();
+            while (resultSet.next()) {
+                String title = resultSet.getString("TITLE");
+                int id = resultSet.getInt("ID");
+                arrayList.add(title);
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+        return arrayList;
+    }
 
 
 }
