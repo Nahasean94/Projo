@@ -70,10 +70,11 @@ public class DatabaseOperations {
      * @param name
      */
     public void createNewProject(String name) {
-        String sql = "INSERT INTO PROJECTS(NAME) VALUES (?)";
+        String sql = "INSERT INTO PROJECTS(NAME,INDEFINITE) VALUES (?,?)";
         try (Connection conn = this.connect();
              PreparedStatement preparedStatement = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             preparedStatement.setString(1, name);
+            preparedStatement.setInt(2, 1);
             preparedStatement.executeUpdate();
             ResultSet rs = preparedStatement.getGeneratedKeys();
             if (rs.next()) {
