@@ -1,7 +1,6 @@
 package database;
 
 
-import controllers.Controller;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -118,11 +117,24 @@ public class DatabaseOperations {
      * Update the project description
      *
      * @param description
-     * @param id
+     * @param title
      */
-    public void updateProjectDescription(int id, String description) {
-        String sql = "UPDATE PROJECTS SET DESCRIPTION=? WHERE ID=?";
-        Query(id, description, sql);
+    public void updateProjectDescription(String title, String description) {
+        String sql = "SELECT ID FROM PROJECTS WHERE NAME=?";
+        ResultSet resultSet ;
+        int id=0;
+        try (Connection conn = this.connect();
+             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            preparedStatement.setString(1,title);
+            resultSet = preparedStatement.executeQuery();
+            while (resultSet.next()) {
+                id = resultSet.getInt("ID");
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+        String sql2 = "UPDATE PROJECTS SET DESCRIPTION=? WHERE ID=?";
+        Query(id, description, sql2);
     }
 
     /**

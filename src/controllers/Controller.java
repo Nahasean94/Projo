@@ -1,6 +1,5 @@
 package controllers;
 
-
 import database.DatabaseOperations;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -9,6 +8,7 @@ import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
 import javafx.util.Pair;
 import java.sql.Date;
@@ -22,9 +22,9 @@ import java.util.stream.IntStream;
 
 public class Controller {
     @FXML
-    private ListView projectTitles;
+    private ListView projectTitles,noteTitles;
     @FXML
-    private ListView noteTitles;
+    private Button addDescription ;
     @FXML
     private TabPane tabPane;
     @FXML
@@ -33,6 +33,8 @@ public class Controller {
     private Accordion projectAccordion;
     @FXML
     private TitledPane tasksPane, descriptionPane;
+
+    private String itemName="";
 
 
     private DatabaseOperations databaseOperations = new DatabaseOperations();
@@ -146,13 +148,11 @@ public class Controller {
         });
 
         Optional result = dialog.showAndWait();
-
         result.ifPresent(titleDue -> {
             databaseOperations.createNote(titleDue.toString());
             tabPane.getSelectionModel().selectLast();
             fetchNoteTitles();
         });
-
     }
 
     /**
@@ -185,14 +185,6 @@ public class Controller {
         }
     }
 
-//    /**
-//     * Fetch project titles
-//     */
-//
-//    public void addProjectTitleToList(String title) {
-//        projectTitles.getItems().add(title);
-//    }
-
     private void saveNewProject(String title, LocalDate due) {
         if (due != null) {
             databaseOperations.createNewProject(title.trim(), Date.valueOf(due));
@@ -215,5 +207,55 @@ public class Controller {
     public void onProjectClicked() {
         viewProjectTitle.setText(projectTitles.getSelectionModel().getSelectedItem().toString());
         projectAccordion.setExpandedPane(tasksPane);
+        itemName=projectTitles.getSelectionModel().getSelectedItem().toString();
+    }
+
+    //add a project description
+    public void addProjectDescription(){
+        Dialog dialog = new Dialog();
+        dialog.setTitle("Add project description");
+
+// Set the button types.
+        ButtonType saveButtonType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, ButtonType.CANCEL);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+
+        TextArea description = new TextArea();
+        description.setPromptText("Add description");
+
+        grid.setPadding(new Insets(10));
+        grid.add(description, 0, 0);
+
+
+
+// Enable/Disable login button depending on whether a title was entered.
+        Node saveButton = dialog.getDialogPane().lookupButton(saveButtonType);
+        saveButton.setDisable(true);
+
+// Do some validation (using the Java 8 lambda syntax).
+        description.textProperty().addListener((observable, oldValue, newValue) -> {
+            saveButton.setDisable(newValue.trim().isEmpty());
+        });
+        dialog.getDialogPane().setContent(grid);
+
+
+// Request focus on the title field by default.
+        Platform.runLater(description::requestFocus);
+
+// Convert the result to a title-datePicker-pair when the login button is clicked.
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == saveButtonType) {
+                return description.getText();
+            }
+            return null;
+        });
+
+        Optional result = dialog.showAndWait();
+        result.ifPresent(desc -> {
+            databaseOperations.updateProjectDescription(itemName,desc.toString());
+        });
     }
 }
