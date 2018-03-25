@@ -8,9 +8,11 @@ import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextFlow;
 import javafx.util.Pair;
+
 import java.sql.Date;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -22,9 +24,9 @@ import java.util.stream.IntStream;
 
 public class Controller {
     @FXML
-    private ListView projectTitles,noteTitles;
+    private ListView projectTitles, noteTitles;
     @FXML
-    private Button addDescription ;
+    private Button addDescription,editDescription;
     @FXML
     private TabPane tabPane;
     @FXML
@@ -33,8 +35,12 @@ public class Controller {
     private Accordion projectAccordion;
     @FXML
     private TitledPane tasksPane, descriptionPane;
+    @FXML
+    private TextFlow projectDescription;
 
-    private String itemName="";
+    private String projectDescriptionText="";
+
+    private String itemName = "";
 
 
     private DatabaseOperations databaseOperations = new DatabaseOperations();
@@ -207,11 +213,28 @@ public class Controller {
     public void onProjectClicked() {
         viewProjectTitle.setText(projectTitles.getSelectionModel().getSelectedItem().toString());
         projectAccordion.setExpandedPane(tasksPane);
-        itemName=projectTitles.getSelectionModel().getSelectedItem().toString();
+        itemName = projectTitles.getSelectionModel().getSelectedItem().toString();
+        fetchProjectMetaData();
+    }
+
+    private void fetchProjectMetaData() {
+        String description = databaseOperations.getProjectDescription(itemName);
+        if (description.isEmpty()) {
+            description = "Add a description for this project";
+            addDescription.setDisable(false);
+            editDescription.setDisable(true);
+        } else {
+            addDescription.setDisable(true);
+            editDescription.setDisable(false);
+            projectDescriptionText=description;
+        }
+        projectDescription.getChildren().setAll(new Text(description));
+//        projectDescription.getChildren().add();
+
     }
 
     //add a project description
-    public void addProjectDescription(){
+    public void addProjectDescription() {
         Dialog dialog = new Dialog();
         dialog.setTitle("Add project description");
 
@@ -224,11 +247,11 @@ public class Controller {
         grid.setVgap(10);
 
         TextArea description = new TextArea();
-        description.setPromptText("Add description");
+
+        description.setWrapText(true);
 
         grid.setPadding(new Insets(10));
         grid.add(description, 0, 0);
-
 
 
 // Enable/Disable login button depending on whether a title was entered.
@@ -255,7 +278,56 @@ public class Controller {
 
         Optional result = dialog.showAndWait();
         result.ifPresent(desc -> {
-            databaseOperations.updateProjectDescription(itemName,desc.toString());
+            databaseOperations.updateProjectDescription(itemName, desc.toString());
+            fetchProjectMetaData();
+        });
+    }    //add a project description
+    public void editProjectDescription() {
+        Dialog dialog = new Dialog();
+        dialog.setTitle("Edit project description");
+
+// Set the button types.
+        ButtonType saveButtonType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, ButtonType.CANCEL);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+
+        TextArea description = new TextArea();
+        description.setText(projectDescriptionText);
+        description.setWrapText(true);
+
+        grid.setPadding(new Insets(10));
+        grid.add(description, 0, 0);
+
+
+// Enable/Disable login button depending on whether a title was entered.
+        Node saveButton = dialog.getDialogPane().lookupButton(saveButtonType);
+        saveButton.setDisable(true);
+
+// Do some validation (using the Java 8 lambda syntax).
+        description.textProperty().addListener((observable, oldValue, newValue) -> {
+            saveButton.setDisable(newValue.trim().isEmpty());
+        });
+        dialog.getDialogPane().setContent(grid);
+
+
+// Request focus on the title field by default.
+        Platform.runLater(description::requestFocus);
+
+// Convert the result to a title-datePicker-pair when the login button is clicked.
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == saveButtonType) {
+                return description.getText();
+            }
+            return null;
+        });
+
+        Optional result = dialog.showAndWait();
+        result.ifPresent(desc -> {
+            databaseOperations.updateProjectDescription(itemName, desc.toString());
+            fetchProjectMetaData();
         });
     }
 }

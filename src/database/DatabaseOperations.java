@@ -1,7 +1,6 @@
 package database;
 
 
-
 import java.sql.*;
 import java.util.ArrayList;
 
@@ -33,7 +32,7 @@ public class DatabaseOperations {
      * @param due
      */
     public String createNewProject(String name, Date due) {
-        String projectName="";
+        String projectName = "";
         String sql = "INSERT INTO PROJECTS(DUE,NAME) VALUES (?,?)";
         try (Connection conn = this.connect();
              PreparedStatement preparedStatement = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -43,15 +42,15 @@ public class DatabaseOperations {
             ResultSet rs = preparedStatement.getGeneratedKeys();
             if (rs.next()) {
 //                System.out.println(rs.getInt(1));
-                int id=rs.getInt(1);
+                int id = rs.getInt(1);
                 System.out.println(id);
                 String sql2 = "SELECT * FROM PROJECTS WHERE ID=?";
                 try (Connection conn2 = this.connect();
                      PreparedStatement preparedStatement2 = conn2.prepareStatement(sql2)) {
-                    preparedStatement2.setInt(1,id);
+                    preparedStatement2.setInt(1, id);
                     ResultSet rs2 = preparedStatement2.executeQuery();
                     if (rs2.next()) {
-                        projectName= rs2.getString("NAME");
+                        projectName = rs2.getString("NAME");
                     }
                 } catch (SQLException e) {
                     System.out.println(e.getMessage());
@@ -121,11 +120,11 @@ public class DatabaseOperations {
      */
     public void updateProjectDescription(String title, String description) {
         String sql = "SELECT ID FROM PROJECTS WHERE NAME=?";
-        ResultSet resultSet ;
-        int id=0;
+        ResultSet resultSet;
+        int id = 0;
         try (Connection conn = this.connect();
              PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            preparedStatement.setString(1,title);
+            preparedStatement.setString(1, title);
             resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
                 id = resultSet.getInt("ID");
@@ -135,6 +134,25 @@ public class DatabaseOperations {
         }
         String sql2 = "UPDATE PROJECTS SET DESCRIPTION=? WHERE ID=?";
         Query(id, description, sql2);
+    }
+
+    public String getProjectDescription(String name) {
+        String sql = "SELECT DESCRIPTION FROM PROJECTS WHERE NAME=?";
+        String description = "";
+        ResultSet resultSet;
+        try (Connection conn = this.connect();
+             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            preparedStatement.setString(1, name);
+            resultSet = preparedStatement.executeQuery();
+            while ((resultSet.next())) {
+                description = resultSet.getString("DESCRIPTION");
+            }
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+        return description;
+
     }
 
     /**
@@ -474,7 +492,7 @@ public class DatabaseOperations {
      */
     public ArrayList loadProjectTitles() {
         String sql = "SELECT * FROM PROJECTS";
-        ResultSet resultSet = null;
+        ResultSet resultSet;
         ArrayList arrayList = new ArrayList();
 
         try (Connection conn = this.connect();
