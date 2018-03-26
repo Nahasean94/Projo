@@ -4,6 +4,8 @@ import database.DatabaseOperations;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -17,11 +19,13 @@ import javafx.scene.text.TextFlow;
 import javafx.util.Pair;
 
 import java.sql.Date;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.Period;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -179,15 +183,16 @@ public class Controller {
 
     private void fetchProjectTitles() {
         ArrayList arrayList = databaseOperations.loadProjectTitles();
-        if(!arrayList.isEmpty()){
-        try {
-            ObservableList observableList = FXCollections.observableArrayList(reverse(arrayList));
-            projectTitles.setItems(observableList);
-            projectTitles.getSelectionModel().selectFirst();
-            onProjectClicked();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }}
+        if (!arrayList.isEmpty()) {
+            try {
+                ObservableList observableList = FXCollections.observableArrayList(reverse(arrayList));
+                projectTitles.setItems(observableList);
+                projectTitles.getSelectionModel().selectFirst();
+                onProjectClicked();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     /**
@@ -370,34 +375,52 @@ public class Controller {
     private void fetchProjectTasks() {
         ArrayList<ArrayList> arrayLists = (databaseOperations.fetchTasks(itemId));
         try {
-                 ObservableList<Task> data = FXCollections.observableArrayList();
+            ObservableList<Task> data = FXCollections.observableArrayList();
 
-            for(int i=arrayLists.size()-1;i>=0;i--){
-                SimpleStringProperty name=new SimpleStringProperty(arrayLists.get(i).get(0).toString());
-                SimpleIntegerProperty complete=new SimpleIntegerProperty(Integer.parseInt(arrayLists.get(i).get(1).toString()));
-                SimpleStringProperty date=new SimpleStringProperty(arrayLists.get(i).get(2).toString());
-                int temp=arrayLists.size()-1-i;
-                SimpleIntegerProperty c=new SimpleIntegerProperty(++temp);
-                data.add(new Task(name,c,complete,date));
+            for (int i = arrayLists.size() - 1; i >= 0; i--) {
+                int id = (Integer) arrayLists.get(i).get(0);
+                SimpleStringProperty name = new SimpleStringProperty(arrayLists.get(i).get(1).toString());
+                SimpleStringProperty date = new SimpleStringProperty(formatTime(arrayLists.get(i).get(3).toString()));
+                CheckBox complete = new CheckBox();
+                if (Integer.parseInt(arrayLists.get(i).get(2).toString()) == 1) {
+                    complete.setSelected(true);
+                }
+                complete.selectedProperty().addListener((observable, oldValue, newValue) -> {
+                    if (!!newValue) {
+                        databaseOperations.markTaskAsComplete(id);
+                    } else {
+                        databaseOperations.markTaskAsIncomplete(id);
+                    }
+                });
+                int temp = arrayLists.size() - 1 - i;
+                SimpleIntegerProperty c = new SimpleIntegerProperty(++temp);
+                data.add(new Task(name, c, complete, date));
                 taskCount.setCellValueFactory(new PropertyValueFactory<>("taskId"));
                 taskName.setCellValueFactory(new PropertyValueFactory<>("taskName"));
                 taskDate.setCellValueFactory(new PropertyValueFactory<>("dateCreated"));
                 taskComplete.setCellValueFactory(new PropertyValueFactory<>("complete"));
             }
-                tasksTable.getItems().setAll(data);
+            tasksTable.getItems().setAll(data);
         } catch (Exception e) {
             e.printStackTrace();
         }
 
     }
 
+    private String formatTime(String date) {
+        String dateTime[] = date.split(" ");
+        String day[] = dateTime[0].split("-");
+        String time[] = dateTime[1].split(":");
+        return day[0] + "-" + day[1] + "-" + day[2] + " " + time[0] + ":" + time[1];
+    }
+
     public static class Task {
         private SimpleStringProperty taskName;
         private SimpleIntegerProperty taskId;
-        private SimpleIntegerProperty complete;
+        private CheckBox complete;
         private SimpleStringProperty dateCreated;
 
-        public Task(SimpleStringProperty taskName, SimpleIntegerProperty taskId, SimpleIntegerProperty complete, SimpleStringProperty dateCreated) {
+        public Task(SimpleStringProperty taskName, SimpleIntegerProperty taskId, CheckBox complete, SimpleStringProperty dateCreated) {
             this.taskName = taskName;
             this.taskId = taskId;
             this.complete = complete;
@@ -428,16 +451,16 @@ public class Controller {
             this.taskId.set(taskId);
         }
 
-        public int getComplete() {
-            return complete.get();
-        }
-
-        public SimpleIntegerProperty completedProperty() {
+        public CheckBox getComplete() {
             return complete;
         }
 
-        public void setComplete(int complete) {
-            this.complete.set(complete);
+        public CheckBox completedProperty() {
+            return complete;
+        }
+
+        public void setComplete(CheckBox complete) {
+            this.complete = complete;
         }
 
         public String getDateCreated() {

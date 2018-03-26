@@ -553,6 +553,7 @@ public class DatabaseOperations {
             resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
                 ArrayList arrayList=new ArrayList();
+                arrayList.add(resultSet.getInt("ID"));
                 arrayList.add(resultSet.getString("NAME"));
                 arrayList.add(resultSet.getInt("COMPLETE"));
                 arrayList.add(resultSet.getString("DATE_CREATED"));
