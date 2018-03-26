@@ -75,9 +75,9 @@ public class DatabaseOperations {
             preparedStatement.setInt(2, 1);
             preparedStatement.executeUpdate();
             ResultSet rs = preparedStatement.getGeneratedKeys();
-            if (rs.next()) {
-                System.out.println(rs.getInt(1));
-            }
+//            if (rs.next()) {
+//                System.out.println(rs.getInt(1));
+//            }
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
@@ -122,16 +122,7 @@ public class DatabaseOperations {
         String sql = "SELECT ID FROM PROJECTS WHERE NAME=?";
         ResultSet resultSet;
         int id = 0;
-        try (Connection conn = this.connect();
-             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            preparedStatement.setString(1, title);
-            resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                id = resultSet.getInt("ID");
-            }
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
+        id = getId(title, sql, id);
         String sql2 = "UPDATE PROJECTS SET DESCRIPTION=? WHERE ID=?";
         Query(id, description, sql2);
     }
@@ -282,18 +273,18 @@ public class DatabaseOperations {
      * @param due
      * @param projectID
      */
-    public void createTask(String name, Date due, int projectID) {
-        String sql = "INSERT INTO TASKS (ID,NAME,DUE,COMPLETE,PROJECT_ID,DATE_CREATED,TRASH) VALUES (DEFAULT,?,?,DEFAULT,?,DEFAULT,DEFAULT)";
-        try (Connection conn = this.connect();
-             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            preparedStatement.setString(1, name);
-            preparedStatement.setDate(2, new java.sql.Date(due.getTime()));
-            preparedStatement.setInt(3, projectID);
-            preparedStatement.executeUpdate();
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-    }
+//    public void createTask(String name, Date due, int projectID) {
+//        String sql = "INSERT INTO TASKS (ID,NAME,DUE,COMPLETE,PROJECT_ID,DATE_CREATED,TRASH) VALUES (DEFAULT,?,?,DEFAULT,?,DEFAULT,DEFAULT)";
+//        try (Connection conn = this.connect();
+//             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+//            preparedStatement.setString(1, name);
+//            preparedStatement.setDate(2, new java.sql.Date(due.getTime()));
+//            preparedStatement.setInt(3, projectID);
+//            preparedStatement.executeUpdate();
+//        } catch (SQLException e) {
+//            System.out.println(e.getMessage());
+//        }
+//    }
 
     /**
      * Create a new task
@@ -302,7 +293,7 @@ public class DatabaseOperations {
      * @param projectID
      */
     public void createTask(String name, int projectID) {
-        String sql = "INSERT INTO TASKS (ID,NAME,DUE,COMPLETE,PROJECT_ID,DATE_CREATED,TRASH) VALUES (DEFAULT,?,DEFAULT ,DEFAULT,?,DEFAULT,DEFAULT)";
+        String sql = "INSERT INTO TASKS (ID,NAME,COMPLETE,PROJECT_ID,DATE_CREATED,TRASH) VALUES (DEFAULT,? ,DEFAULT,?,DEFAULT,DEFAULT)";
         Query(projectID, name, sql);
     }
 
@@ -526,6 +517,52 @@ public class DatabaseOperations {
             System.out.println(e.getMessage());
         }
         return arrayList;
+    }
+
+    public int getItemId(String name) {
+        String sql = "SELECT ID FROM PROJECTS WHERE NAME=?";
+        ResultSet resultSet;
+        int id = 0;
+
+        id = getId(name, sql, id);
+        return id;
+    }
+
+    private int getId(String name, String sql, int id) {
+        ResultSet resultSet;
+        try (Connection conn = this.connect();
+             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            preparedStatement.setString(1, name);
+            resultSet = preparedStatement.executeQuery();
+            while (resultSet.next()) {
+                id = resultSet.getInt("ID");
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+        return id;
+    }
+//fetch the tasks of a project
+    public ArrayList<ArrayList> fetchTasks(int id) {
+        String sql = "SELECT * FROM TASKS WHERE PROJECT_ID=?";
+        ResultSet resultSet = null;
+        ArrayList<ArrayList> arrayLists=new ArrayList<>();
+        try (Connection conn = this.connect();
+             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            preparedStatement.setInt(1, id);
+            resultSet = preparedStatement.executeQuery();
+            while (resultSet.next()) {
+                ArrayList arrayList=new ArrayList();
+                arrayList.add(resultSet.getInt("ID"));
+                arrayList.add(resultSet.getString("NAME"));
+                arrayList.add(resultSet.getInt("COMPLETE"));
+                arrayList.add(resultSet.getString("DATE_CREATED"));
+                arrayLists.add(arrayList);
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+        return arrayLists;
     }
 
 
