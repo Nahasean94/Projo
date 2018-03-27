@@ -3,13 +3,9 @@ package controllers;
 import database.DatabaseOperations;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleIntegerProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+import javafx.beans.property.SimpleStringProperty;;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -19,6 +15,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldListCell;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.util.Pair;
@@ -40,11 +37,13 @@ public class Controller {
     @FXML
     private TabPane tabPane;
     @FXML
+    private Tab projectsTab, notesTab;
+    @FXML
     private Label viewProjectTitle;
     @FXML
     private Accordion projectAccordion;
     @FXML
-    private TitledPane tasksPane;
+    private TitledPane tasksPane, notesPane, descriptionPane;
     @FXML
     private TextFlow projectDescription;
     @FXML
@@ -55,6 +54,8 @@ public class Controller {
     private TableView tasksTable;
     @FXML
     private ChoiceBox priorityBox;
+    @FXML
+    private VBox viewBox;
 
     private String projectDescriptionText = "";
 
@@ -69,8 +70,8 @@ public class Controller {
 
     @FXML
     public void initialize() {
-        fetchProjectTitles();
         fetchNoteTitles();
+        fetchProjectTitles();
     }
 
     /**
@@ -190,6 +191,7 @@ public class Controller {
             try {
                 ObservableList observableList = FXCollections.observableArrayList(reverse(arrayList));
                 projectTitles.setEditable(true);
+                projectsTab.setText("Projects (" + arrayList.size() + ")");
                 projectTitles.setCellFactory(TextFieldListCell.forListView());
 
                 projectTitles.setOnEditCommit((EventHandler<ListView.EditEvent<String>>) t -> {
@@ -215,13 +217,15 @@ public class Controller {
         try {
             ObservableList observableList = FXCollections.observableArrayList(reverse(arrayList));
             noteTitles.setCellFactory(TextFieldListCell.forListView());
-
+            notesTab.setText("Notes (" + arrayList.size() + ")");
             noteTitles.setOnEditCommit((EventHandler<ListView.EditEvent<String>>) t -> {
                 String oldValue = noteTitles.getSelectionModel().getSelectedItem().toString();
                 noteTitles.getItems().set(t.getIndex(), t.getNewValue());
                 databaseOperations.editNoteTitle(oldValue, t.getNewValue().toString());
             });
             noteTitles.setItems(observableList);
+            noteTitles.getSelectionModel().selectFirst();
+            onNoteClicked();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -245,6 +249,25 @@ public class Controller {
         return IntStream.rangeClosed(0, last).map(i -> (last - i)).mapToObj(list::get).collect(Collectors.toList());
     }
 
+    public void onProjectsTab() {
+        if (descriptionPane != null) {
+            descriptionPane.setDisable(false);
+            tasksPane.setDisable(false);
+            notesPane.setDisable(true);
+            onProjectClicked();
+        }
+    }
+
+    public void onNotesTab() {
+        if (descriptionPane != null) {
+            descriptionPane.setDisable(true);
+            tasksPane.setDisable(true);
+            notesPane.setDisable(false);
+            noteTitles.getSelectionModel().selectFirst();
+            onNoteClicked();
+        }
+    }
+
     //populate the view pane with details of the selected project.
     public void onProjectClicked() {
         viewProjectTitle.setText(projectTitles.getSelectionModel().getSelectedItem().toString());
@@ -255,6 +278,14 @@ public class Controller {
         priorityBox.setValue("Low");
         fetchProjectTasks();
         fetchProjectDescription();
+
+    }
+
+    //populate the view pane with details of the selected project.
+    public void onNoteClicked() {
+        viewProjectTitle.setText(noteTitles.getSelectionModel().getSelectedItem().toString());
+        tasksPane.setText("Tasks");
+        projectAccordion.setExpandedPane(notesPane);
 
     }
 
@@ -398,6 +429,7 @@ public class Controller {
     private void fetchProjectTasks() {
         ArrayList<ArrayList> arrayLists = (databaseOperations.fetchTasks(itemId));
         try {
+            tasksPane.setText("Tasks (" + arrayLists.size() + ")");
             ObservableList<Task> data = FXCollections.observableArrayList();
 //iterate through each element of the arraylist
             for (int i = arrayLists.size() - 1; i >= 0; i--) {
@@ -455,6 +487,7 @@ public class Controller {
         }
 
     }
+
 
     private String formatTime(String date) {
         String dateTime[] = date.split(" ");
