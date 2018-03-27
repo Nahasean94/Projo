@@ -575,9 +575,18 @@ public class DatabaseOperations {
     }
 
     private void anotherQuery(int id, String priority, String sql) {
+        query3(id, priority, sql);
+    }
+
+    public void editTaskName(int id, String name) {
+        String sql = "UPDATE TASKS SET NAME=? WHERE ID=?";
+        query3(id, name, sql);
+    }
+
+    private void query3(int id, String name, String sql) {
         try (Connection connection = this.connect();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, priority);
+            preparedStatement.setString(1, name);
             preparedStatement.setInt(2, id);
             preparedStatement.executeUpdate();
 
