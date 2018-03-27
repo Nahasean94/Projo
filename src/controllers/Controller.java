@@ -3,13 +3,9 @@ package controllers;
 import database.DatabaseOperations;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleIntegerProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+import javafx.beans.property.SimpleStringProperty;;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -22,7 +18,6 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.util.Pair;
-
 import java.sql.Date;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -39,6 +34,8 @@ public class Controller {
     private Button addDescription, editDescription, saveNewTask;
     @FXML
     private TabPane tabPane;
+    @FXML
+    private Tab projectsTab,notesTab;
     @FXML
     private Label viewProjectTitle;
     @FXML
@@ -190,6 +187,7 @@ public class Controller {
             try {
                 ObservableList observableList = FXCollections.observableArrayList(reverse(arrayList));
                 projectTitles.setEditable(true);
+                projectsTab.setText("Projects ("+arrayList.size()+")");
                 projectTitles.setCellFactory(TextFieldListCell.forListView());
 
                 projectTitles.setOnEditCommit((EventHandler<ListView.EditEvent<String>>) t -> {
@@ -215,7 +213,7 @@ public class Controller {
         try {
             ObservableList observableList = FXCollections.observableArrayList(reverse(arrayList));
             noteTitles.setCellFactory(TextFieldListCell.forListView());
-
+            notesTab.setText("Notes ("+arrayList.size()+")");
             noteTitles.setOnEditCommit((EventHandler<ListView.EditEvent<String>>) t -> {
                 String oldValue = noteTitles.getSelectionModel().getSelectedItem().toString();
                 noteTitles.getItems().set(t.getIndex(), t.getNewValue());
