@@ -8,6 +8,8 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
@@ -19,13 +21,9 @@ import javafx.scene.text.TextFlow;
 import javafx.util.Pair;
 
 import java.sql.Date;
-import java.time.Duration;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.Period;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -43,15 +41,17 @@ public class Controller {
     @FXML
     private Accordion projectAccordion;
     @FXML
-    private TitledPane tasksPane, descriptionPane;
+    private TitledPane tasksPane;
     @FXML
     private TextFlow projectDescription;
     @FXML
     private TextField newTaskTextField;
     @FXML
-    private TableColumn<Task, String> taskName, taskCount, taskDate, taskComplete;
+    private TableColumn<Task, String> taskName, taskCount, taskDate, taskComplete, taskPriority;
     @FXML
     private TableView tasksTable;
+    @FXML
+    private ChoiceBox priorityBox;
 
     private String projectDescriptionText = "";
 
@@ -233,6 +233,8 @@ public class Controller {
         projectAccordion.setExpandedPane(tasksPane);
         itemName = projectTitles.getSelectionModel().getSelectedItem().toString();
         itemId = databaseOperations.getItemId(itemName);
+        priorityBox.getItems().setAll("Low", "Medium", "High");
+        priorityBox.setValue("Low");
         fetchProjectTasks();
         fetchProjectDescription();
 
@@ -365,9 +367,12 @@ public class Controller {
     //add a new task
     public void addProjectTask() {
         if (!newTaskTextField.getText().trim().isEmpty()) {
-            databaseOperations.createTask(newTaskTextField.getText().trim(), itemId);
+            databaseOperations.createTask(newTaskTextField.getText().trim(), itemId, priorityBox.getValue().toString());
             newTaskTextField.setText("");
+            saveNewTask.setDisable(true);
+            priorityBox.setValue("Low");
             fetchProjectTasks();
+
         }
     }
 
@@ -376,15 +381,17 @@ public class Controller {
         ArrayList<ArrayList> arrayLists = (databaseOperations.fetchTasks(itemId));
         try {
             ObservableList<Task> data = FXCollections.observableArrayList();
-
+//iterate through each element of the arraylist
             for (int i = arrayLists.size() - 1; i >= 0; i--) {
                 int id = (Integer) arrayLists.get(i).get(0);
                 SimpleStringProperty name = new SimpleStringProperty(arrayLists.get(i).get(1).toString());
                 SimpleStringProperty date = new SimpleStringProperty(formatTime(arrayLists.get(i).get(3).toString()));
                 CheckBox complete = new CheckBox();
+                //mark checkbox if task is complete
                 if (Integer.parseInt(arrayLists.get(i).get(2).toString()) == 1) {
                     complete.setSelected(true);
                 }
+                //add event listener to mark a task as complete or not
                 complete.selectedProperty().addListener((observable, oldValue, newValue) -> {
                     if (!!newValue) {
                         databaseOperations.markTaskAsComplete(id);
@@ -392,13 +399,33 @@ public class Controller {
                         databaseOperations.markTaskAsIncomplete(id);
                     }
                 });
+
+                ChoiceBox priority = new ChoiceBox();
+                priority.getItems().setAll("Low", "Medium", "High");
+                priorityBox.setTooltip(new Tooltip("Priority"));
+//get the priority of the task and set the choicebox
+                if (arrayLists.get(i).get(4) != null) {
+                    priority.setValue(arrayLists.get(i).get(4));
+                } else {
+                    priority.setValue("Low");
+                }
+                //add event listener to the priority choicebox
+                priority.setOnAction(new EventHandler<ActionEvent>() {
+                    @Override
+                    public void handle(ActionEvent event) {
+                        databaseOperations.changePriority(id, priority.getSelectionModel().getSelectedItem().toString());
+                    }
+                });
+//initialize variable to help with the counter in table column
                 int temp = arrayLists.size() - 1 - i;
                 SimpleIntegerProperty c = new SimpleIntegerProperty(++temp);
-                data.add(new Task(name, c, complete, date));
+                data.add(new Task(name, c, complete, date, priority));
+//obtain the value of each column
                 taskCount.setCellValueFactory(new PropertyValueFactory<>("taskId"));
                 taskName.setCellValueFactory(new PropertyValueFactory<>("taskName"));
                 taskDate.setCellValueFactory(new PropertyValueFactory<>("dateCreated"));
                 taskComplete.setCellValueFactory(new PropertyValueFactory<>("complete"));
+                taskPriority.setCellValueFactory(new PropertyValueFactory<>("taskPriority"));
             }
             tasksTable.getItems().setAll(data);
         } catch (Exception e) {
@@ -418,13 +445,15 @@ public class Controller {
         private SimpleStringProperty taskName;
         private SimpleIntegerProperty taskId;
         private CheckBox complete;
+        private ChoiceBox taskPriority;
         private SimpleStringProperty dateCreated;
 
-        public Task(SimpleStringProperty taskName, SimpleIntegerProperty taskId, CheckBox complete, SimpleStringProperty dateCreated) {
+        public Task(SimpleStringProperty taskName, SimpleIntegerProperty taskId, CheckBox complete, SimpleStringProperty dateCreated, ChoiceBox taskPriority) {
             this.taskName = taskName;
             this.taskId = taskId;
             this.complete = complete;
             this.dateCreated = dateCreated;
+            this.taskPriority = taskPriority;
         }
 
         public String getTaskName() {
@@ -461,6 +490,18 @@ public class Controller {
 
         public void setComplete(CheckBox complete) {
             this.complete = complete;
+        }
+
+        public ChoiceBox getTaskPriority() {
+            return taskPriority;
+        }
+
+        public ChoiceBox taskpriorityProperty() {
+            return taskPriority;
+        }
+
+        public void setTaskPriority(ChoiceBox taskPriority) {
+            this.taskPriority = taskPriority;
         }
 
         public String getDateCreated() {
