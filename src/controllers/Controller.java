@@ -9,12 +9,15 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.cell.TextFieldListCell;
+import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.GridPane;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
@@ -186,6 +189,14 @@ public class Controller {
         if (!arrayList.isEmpty()) {
             try {
                 ObservableList observableList = FXCollections.observableArrayList(reverse(arrayList));
+                projectTitles.setEditable(true);
+                projectTitles.setCellFactory(TextFieldListCell.forListView());
+
+                projectTitles.setOnEditCommit((EventHandler<ListView.EditEvent<String>>) t -> {
+                    String oldValue = projectTitles.getSelectionModel().getSelectedItem().toString();
+                    projectTitles.getItems().set(t.getIndex(), t.getNewValue());
+                    databaseOperations.editProjectName(oldValue, t.getNewValue().toString());
+                });
                 projectTitles.setItems(observableList);
                 projectTitles.getSelectionModel().selectFirst();
                 onProjectClicked();
@@ -203,6 +214,13 @@ public class Controller {
         ArrayList arrayList = databaseOperations.loadNoteTitles();
         try {
             ObservableList observableList = FXCollections.observableArrayList(reverse(arrayList));
+            noteTitles.setCellFactory(TextFieldListCell.forListView());
+
+            noteTitles.setOnEditCommit((EventHandler<ListView.EditEvent<String>>) t -> {
+                String oldValue = noteTitles.getSelectionModel().getSelectedItem().toString();
+                noteTitles.getItems().set(t.getIndex(), t.getNewValue());
+                databaseOperations.editNoteTitle(oldValue, t.getNewValue().toString());
+            });
             noteTitles.setItems(observableList);
         } catch (Exception e) {
             e.printStackTrace();
@@ -410,12 +428,15 @@ public class Controller {
                     priority.setValue("Low");
                 }
                 //add event listener to the priority choicebox
-                priority.setOnAction(new EventHandler<ActionEvent>() {
-                    @Override
-                    public void handle(ActionEvent event) {
-                        databaseOperations.changePriority(id, priority.getSelectionModel().getSelectedItem().toString());
-                    }
-                });
+                priority.setOnAction(event -> databaseOperations.changePriority(id, priority.getSelectionModel().getSelectedItem().toString()));
+                //save the new value when a task name is edited
+                taskName.setOnEditCommit(
+                        t -> {
+                            t.getTableView().getItems().get(
+                                    t.getTablePosition().getRow()).setTaskName(t.getNewValue());
+                            databaseOperations.editTaskName(id, t.getNewValue());
+                        }
+                );
 //initialize variable to help with the counter in table column
                 int temp = arrayLists.size() - 1 - i;
                 SimpleIntegerProperty c = new SimpleIntegerProperty(++temp);
@@ -423,6 +444,7 @@ public class Controller {
 //obtain the value of each column
                 taskCount.setCellValueFactory(new PropertyValueFactory<>("taskId"));
                 taskName.setCellValueFactory(new PropertyValueFactory<>("taskName"));
+                taskName.setCellFactory(TextFieldTableCell.forTableColumn());
                 taskDate.setCellValueFactory(new PropertyValueFactory<>("dateCreated"));
                 taskComplete.setCellValueFactory(new PropertyValueFactory<>("complete"));
                 taskPriority.setCellValueFactory(new PropertyValueFactory<>("taskPriority"));

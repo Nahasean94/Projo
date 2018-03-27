@@ -397,10 +397,10 @@ public class DatabaseOperations {
      * @param noteID
      * @param title
      */
-    public void editNoteTitle(int noteID, String title) {
-        String sql = "UPDATE NOTES SET TITLE=? WHERE ID=?";
-        edit(noteID, title, sql);
-    }
+//  //  public void editNoteTitle(int noteID, String title) {
+//        String sql = "UPDATE NOTES SET TITLE=? WHERE ID=?";
+//        edit(noteID, title, sql);
+//    }
 
     /**
      * Edit note title
@@ -575,10 +575,40 @@ public class DatabaseOperations {
     }
 
     private void anotherQuery(int id, String priority, String sql) {
+        query3(id, priority, sql);
+    }
+
+    public void editTaskName(int id, String name) {
+        String sql = "UPDATE TASKS SET NAME=? WHERE ID=?";
+        query3(id, name, sql);
+    }
+
+    private void query3(int id, String name, String sql) {
         try (Connection connection = this.connect();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, priority);
+            preparedStatement.setString(1, name);
             preparedStatement.setInt(2, id);
+            preparedStatement.executeUpdate();
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    public void editProjectName(String oldName, String newName) {
+        String sql = "UPDATE PROJECTS SET NAME=? WHERE NAME=?";
+        query4(oldName, newName, sql);
+    }
+    public void editNoteTitle(String oldName, String newName) {
+        String sql = "UPDATE NOTES SET TITLE=? WHERE TITLE=?";
+        query4(oldName, newName, sql);
+    }
+
+    private void query4(String oldName, String newName, String sql) {
+        try (Connection connection = this.connect();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, newName);
+            preparedStatement.setString(2, oldName);
             preparedStatement.executeUpdate();
 
         } catch (SQLException e) {
