@@ -9,12 +9,14 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.cell.TextFieldListCell;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.GridPane;
 import javafx.scene.text.Text;
@@ -187,6 +189,14 @@ public class Controller {
         if (!arrayList.isEmpty()) {
             try {
                 ObservableList observableList = FXCollections.observableArrayList(reverse(arrayList));
+                projectTitles.setEditable(true);
+                projectTitles.setCellFactory(TextFieldListCell.forListView());
+
+                projectTitles.setOnEditCommit((EventHandler<ListView.EditEvent<String>>) t -> {
+                    String oldValue = projectTitles.getSelectionModel().getSelectedItem().toString();
+                    projectTitles.getItems().set(t.getIndex(), t.getNewValue());
+                    databaseOperations.editProjectName(oldValue, t.getNewValue().toString());
+                });
                 projectTitles.setItems(observableList);
                 projectTitles.getSelectionModel().selectFirst();
                 onProjectClicked();
@@ -204,6 +214,13 @@ public class Controller {
         ArrayList arrayList = databaseOperations.loadNoteTitles();
         try {
             ObservableList observableList = FXCollections.observableArrayList(reverse(arrayList));
+            noteTitles.setCellFactory(TextFieldListCell.forListView());
+
+            noteTitles.setOnEditCommit((EventHandler<ListView.EditEvent<String>>) t -> {
+                String oldValue = noteTitles.getSelectionModel().getSelectedItem().toString();
+                noteTitles.getItems().set(t.getIndex(), t.getNewValue());
+                databaseOperations.editNoteTitle(oldValue, t.getNewValue().toString());
+            });
             noteTitles.setItems(observableList);
         } catch (Exception e) {
             e.printStackTrace();
