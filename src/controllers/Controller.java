@@ -14,6 +14,8 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldListCell;
 import javafx.scene.control.cell.TextFieldTableCell;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
@@ -48,7 +50,7 @@ public class Controller {
     @FXML
     private TextFlow projectDescription;
     @FXML
-    private TextField newTaskTextField;
+    private TextField newTaskTextField, searchTitles;
     @FXML
     private TableColumn<Task, String> taskName, taskCount, taskDate, taskComplete, taskPriority;
     @FXML
@@ -59,6 +61,8 @@ public class Controller {
     private HTMLEditor noteBody;
 
     private String projectDescriptionText = "";
+    private ArrayList projectsArrayList;
+    private ArrayList notesArrayList;
 
     private String itemName = "";
     private int itemId = 0;
@@ -187,14 +191,17 @@ public class Controller {
      */
 
     private void fetchProjectTitles() {
-        ArrayList arrayList = databaseOperations.loadProjectTitles();
-        if (!arrayList.isEmpty()) {
+        projectsArrayList = databaseOperations.loadProjectTitles();
+        if (projectsArrayList.isEmpty()) {
+            tasksPane.setDisable(true);
+            descriptionPane.setDisable(true);
+        }
+        if (!projectsArrayList.isEmpty()) {
             try {
-                ObservableList observableList = FXCollections.observableArrayList(reverse(arrayList));
+                ObservableList observableList = FXCollections.observableArrayList(reverse(projectsArrayList));
                 projectTitles.setEditable(true);
-                projectsTab.setText("Projects (" + arrayList.size() + ")");
+                projectsTab.setText("Projects (" + projectsArrayList.size() + ")");
                 projectTitles.setCellFactory(TextFieldListCell.forListView());
-
                 projectTitles.setOnEditCommit((EventHandler<ListView.EditEvent<String>>) t -> {
                     String oldValue = projectTitles.getSelectionModel().getSelectedItem().toString();
                     projectTitles.getItems().set(t.getIndex(), t.getNewValue());
@@ -207,6 +214,12 @@ public class Controller {
                 e.printStackTrace();
             }
         }
+        projectTitles.setOnKeyPressed(keyEvent -> {
+            if (keyEvent.getCode() == KeyCode.ENTER) {
+                projectTitles.setEditable(false);
+                onProjectClicked();
+            }
+        });
     }
 
     /**
@@ -214,11 +227,20 @@ public class Controller {
      */
 
     private void fetchNoteTitles() {
-        ArrayList arrayList = databaseOperations.loadNoteTitles();
+        noteTitles.setOnKeyPressed(keyEvent -> {
+            if (keyEvent.getCode() == KeyCode.ENTER) {
+                noteTitles.setEditable(false);
+                onNoteClicked();
+            }
+        });
+        notesArrayList = databaseOperations.loadNoteTitles();
+        if (notesArrayList.isEmpty()) {
+            notesPane.setDisable(true);
+        }
         try {
-            ObservableList observableList = FXCollections.observableArrayList(reverse(arrayList));
+            ObservableList observableList = FXCollections.observableArrayList(reverse(notesArrayList));
             noteTitles.setCellFactory(TextFieldListCell.forListView());
-            notesTab.setText("Notes (" + arrayList.size() + ")");
+            notesTab.setText("Notes (" + notesArrayList.size() + ")");
             noteTitles.setOnEditCommit((EventHandler<ListView.EditEvent<String>>) t -> {
                 String oldValue = noteTitles.getSelectionModel().getSelectedItem().toString();
                 noteTitles.getItems().set(t.getIndex(), t.getNewValue());
@@ -279,6 +301,11 @@ public class Controller {
         priorityBox.setValue("Low");
         fetchProjectTasks();
         fetchProjectDescription();
+        newTaskTextField.setOnKeyPressed(keyEvent -> {
+            if (keyEvent.getCode() == KeyCode.ENTER) {
+                addProjectTask();
+            }
+        });
 
     }
 
@@ -497,7 +524,7 @@ public class Controller {
 
     }
 
-
+    //format timestamp to human readable format
     private String formatTime(String date) {
         String dateTime[] = date.split(" ");
         String day[] = dateTime[0].split("-");
@@ -505,16 +532,62 @@ public class Controller {
         return day[0] + "-" + day[1] + "-" + day[2] + " " + time[0] + ":" + time[1];
     }
 
+    //save note
     public void saveNote() {
         databaseOperations.editNoteBody(itemName, noteBody.getHtmlText().trim());
         saveNoteBody.setDisable(true);
     }
 
+    //disable and enable save button when typing
     public void onTypingNoteBody() {
         if (!noteBody.getHtmlText().trim().isEmpty()) {
             saveNoteBody.setDisable(false);
         } else {
             saveNoteBody.setDisable(true);
+        }
+    }
+
+    public void searchTitles() {
+        String me = "SDf";
+        if (!searchTitles.getText().trim().isEmpty()) {
+            ArrayList projectsResults = new ArrayList();
+            ArrayList notesResults = new ArrayList();
+            for (Object aProjectsArrayList : projectsArrayList) {
+                if (aProjectsArrayList.toString().toLowerCase().contains(searchTitles.getText().trim().toLowerCase())) {
+                    projectsResults.add(aProjectsArrayList);
+                }
+            }
+            for (Object aProjectsArrayList : notesArrayList) {
+                if (aProjectsArrayList.toString().toLowerCase().contains(searchTitles.getText().trim().toLowerCase())) {
+                    notesResults.add(aProjectsArrayList);
+                }
+            }
+
+            projectsTab.setText("Projects (" + projectsResults.size() + ")");
+            notesTab.setText("Notes (" + notesResults.size() + ")");
+            if (projectsResults.isEmpty()) {
+                projectsResults.add("0 Results found");
+            }
+            if (notesResults.isEmpty()) {
+                notesResults.add("0 Results found");
+            }
+            ObservableList projectsObservableList = FXCollections.observableArrayList(reverse(projectsResults));
+            projectTitles.getItems().setAll(projectsObservableList);
+            projectTitles.getSelectionModel().selectFirst();
+            ObservableList notesObservableList = FXCollections.observableArrayList(reverse(notesResults));
+            noteTitles.getItems().setAll(notesObservableList);
+            noteTitles.getSelectionModel().selectFirst();
+
+
+        } else {
+            ObservableList projectsObservableList = FXCollections.observableArrayList(reverse(projectsArrayList));
+            projectTitles.getItems().setAll(projectsObservableList);
+            projectTitles.getSelectionModel().selectFirst();
+            ObservableList notesObservableList = FXCollections.observableArrayList(reverse(notesArrayList));
+            noteTitles.getItems().setAll(notesObservableList);
+            noteTitles.getSelectionModel().selectFirst();
+            projectsTab.setText("Projects (" + projectsArrayList.size() + ")");
+            notesTab.setText("Notes (" + notesArrayList.size() + ")");
         }
     }
 
