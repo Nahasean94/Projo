@@ -9,6 +9,7 @@ import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -16,6 +17,7 @@ import javafx.scene.control.cell.TextFieldListCell;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.Background;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
@@ -42,7 +44,7 @@ public class Controller {
     @FXML
     private Tab projectsTab, notesTab;
     @FXML
-    private Label viewProjectTitle;
+    private Label viewProjectTitle,percentage;
     @FXML
     private Accordion projectAccordion;
     @FXML
@@ -59,6 +61,10 @@ public class Controller {
     private ChoiceBox priorityBox;
     @FXML
     private HTMLEditor noteBody;
+    @FXML
+    private ProgressBar progressBar;
+    @FXML
+    private VBox metaBox;
 
     private String projectDescriptionText = "";
     private ArrayList projectsArrayList;
@@ -277,6 +283,7 @@ public class Controller {
             descriptionPane.setDisable(false);
             tasksPane.setDisable(false);
             notesPane.setDisable(true);
+            metaBox.setVisible(true);
             onProjectClicked();
         }
     }
@@ -286,6 +293,7 @@ public class Controller {
             descriptionPane.setDisable(true);
             tasksPane.setDisable(true);
             notesPane.setDisable(false);
+            metaBox.setVisible(false);
             noteTitles.getSelectionModel().selectFirst();
             onNoteClicked();
         }
@@ -293,6 +301,7 @@ public class Controller {
 
     //populate the view pane with details of the selected project.
     public void onProjectClicked() {
+
         viewProjectTitle.setText(projectTitles.getSelectionModel().getSelectedItem().toString());
         projectAccordion.setExpandedPane(tasksPane);
         itemName = projectTitles.getSelectionModel().getSelectedItem().toString();
@@ -301,7 +310,10 @@ public class Controller {
         priorityBox.setValue("Low");
         fetchProjectTasks();
         fetchProjectDescription();
-        newTaskTextField.setOnKeyPressed(keyEvent -> {
+
+        newTaskTextField.setOnKeyPressed(keyEvent ->
+
+        {
             if (keyEvent.getCode() == KeyCode.ENTER) {
                 addProjectTask();
             }
@@ -464,8 +476,9 @@ public class Controller {
     //fetch Project Tasks
     private void fetchProjectTasks() {
         ArrayList<ArrayList> arrayLists = (databaseOperations.fetchTasks(itemId));
+        int completeTasks = 0;
+        int incompleteTasks = 0;
         try {
-            tasksPane.setText("Tasks (" + arrayLists.size() + ")");
             ObservableList<Task> data = FXCollections.observableArrayList();
 //iterate through each element of the arraylist
             for (int i = arrayLists.size() - 1; i >= 0; i--) {
@@ -476,6 +489,9 @@ public class Controller {
                 //mark checkbox if task is complete
                 if (Integer.parseInt(arrayLists.get(i).get(2).toString()) == 1) {
                     complete.setSelected(true);
+                    completeTasks++;
+                } else {
+                    incompleteTasks++;
                 }
                 //add event listener to mark a task as complete or not
                 complete.selectedProperty().addListener((observable, oldValue, newValue) -> {
@@ -485,7 +501,6 @@ public class Controller {
                         databaseOperations.markTaskAsIncomplete(id);
                     }
                 });
-
                 ChoiceBox priority = new ChoiceBox();
                 priority.getItems().setAll("Low", "Medium", "High");
                 priorityBox.setTooltip(new Tooltip("Priority"));
@@ -518,9 +533,21 @@ public class Controller {
                 taskPriority.setCellValueFactory(new PropertyValueFactory<>("taskPriority"));
             }
             tasksTable.getItems().setAll(data);
+            tasksPane.setText("Tasks (" + arrayLists.size() + ")              Complete (" + completeTasks + "), Incomplete (" + incompleteTasks + ")");
+            calculateCompletion(completeTasks, incompleteTasks);
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+    }
+
+    //calculate percentage completion of a project
+    private void calculateCompletion(int completeTasks, int incompleteTasks) {
+        int total=completeTasks+incompleteTasks;
+        long percent=Math.round(((double)completeTasks/total)*100);
+        progressBar.setProgress((double)completeTasks/total);
+//        progressBar.setp;
+        percentage.setText(percent+" % complete");
 
     }
 
@@ -567,9 +594,11 @@ public class Controller {
             notesTab.setText("Notes (" + notesResults.size() + ")");
             if (projectsResults.isEmpty()) {
                 projectsResults.add("0 Results found");
+                projectTitles.setEditable(false);
             }
             if (notesResults.isEmpty()) {
                 notesResults.add("0 Results found");
+                noteTitles.setEditable(false);
             }
             ObservableList projectsObservableList = FXCollections.observableArrayList(reverse(projectsResults));
             projectTitles.getItems().setAll(projectsObservableList);
