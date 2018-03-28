@@ -50,7 +50,7 @@ public class Controller {
     @FXML
     private TextFlow projectDescription;
     @FXML
-    private TextField newTaskTextField;
+    private TextField newTaskTextField, searchTitles;
     @FXML
     private TableColumn<Task, String> taskName, taskCount, taskDate, taskComplete, taskPriority;
     @FXML
@@ -61,6 +61,8 @@ public class Controller {
     private HTMLEditor noteBody;
 
     private String projectDescriptionText = "";
+    private ArrayList projectsArrayList;
+    private ArrayList notesArrayList;
 
     private String itemName = "";
     private int itemId = 0;
@@ -189,18 +191,17 @@ public class Controller {
      */
 
     private void fetchProjectTitles() {
-        ArrayList arrayList = databaseOperations.loadProjectTitles();
-        if (arrayList.isEmpty()) {
+        projectsArrayList = databaseOperations.loadProjectTitles();
+        if (projectsArrayList.isEmpty()) {
             tasksPane.setDisable(true);
             descriptionPane.setDisable(true);
         }
-        if (!arrayList.isEmpty()) {
+        if (!projectsArrayList.isEmpty()) {
             try {
-                ObservableList observableList = FXCollections.observableArrayList(reverse(arrayList));
+                ObservableList observableList = FXCollections.observableArrayList(reverse(projectsArrayList));
                 projectTitles.setEditable(true);
-                projectsTab.setText("Projects (" + arrayList.size() + ")");
+                projectsTab.setText("Projects (" + projectsArrayList.size() + ")");
                 projectTitles.setCellFactory(TextFieldListCell.forListView());
-
                 projectTitles.setOnEditCommit((EventHandler<ListView.EditEvent<String>>) t -> {
                     String oldValue = projectTitles.getSelectionModel().getSelectedItem().toString();
                     projectTitles.getItems().set(t.getIndex(), t.getNewValue());
@@ -213,6 +214,12 @@ public class Controller {
                 e.printStackTrace();
             }
         }
+        projectTitles.setOnKeyPressed(keyEvent -> {
+            if (keyEvent.getCode() == KeyCode.ENTER) {
+                projectTitles.setEditable(false);
+                onProjectClicked();
+            }
+        });
     }
 
     /**
@@ -220,14 +227,20 @@ public class Controller {
      */
 
     private void fetchNoteTitles() {
-        ArrayList arrayList = databaseOperations.loadNoteTitles();
-        if (arrayList.isEmpty()) {
+        noteTitles.setOnKeyPressed(keyEvent -> {
+            if (keyEvent.getCode() == KeyCode.ENTER) {
+                noteTitles.setEditable(false);
+                onNoteClicked();
+            }
+        });
+        notesArrayList = databaseOperations.loadNoteTitles();
+        if (notesArrayList.isEmpty()) {
             notesPane.setDisable(true);
         }
         try {
-            ObservableList observableList = FXCollections.observableArrayList(reverse(arrayList));
+            ObservableList observableList = FXCollections.observableArrayList(reverse(notesArrayList));
             noteTitles.setCellFactory(TextFieldListCell.forListView());
-            notesTab.setText("Notes (" + arrayList.size() + ")");
+            notesTab.setText("Notes (" + notesArrayList.size() + ")");
             noteTitles.setOnEditCommit((EventHandler<ListView.EditEvent<String>>) t -> {
                 String oldValue = noteTitles.getSelectionModel().getSelectedItem().toString();
                 noteTitles.getItems().set(t.getIndex(), t.getNewValue());
@@ -288,12 +301,9 @@ public class Controller {
         priorityBox.setValue("Low");
         fetchProjectTasks();
         fetchProjectDescription();
-        newTaskTextField.setOnKeyPressed(new EventHandler<KeyEvent>() {
-            @Override
-            public void handle(KeyEvent keyEvent) {
-                if (keyEvent.getCode() == KeyCode.ENTER)  {
-                  addProjectTask();
-                }
+        newTaskTextField.setOnKeyPressed(keyEvent -> {
+            if (keyEvent.getCode() == KeyCode.ENTER) {
+                addProjectTask();
             }
         });
 
@@ -534,6 +544,50 @@ public class Controller {
             saveNoteBody.setDisable(false);
         } else {
             saveNoteBody.setDisable(true);
+        }
+    }
+
+    public void searchTitles() {
+        String me = "SDf";
+        if (!searchTitles.getText().trim().isEmpty()) {
+            ArrayList projectsResults = new ArrayList();
+            ArrayList notesResults = new ArrayList();
+            for (Object aProjectsArrayList : projectsArrayList) {
+                if (aProjectsArrayList.toString().toLowerCase().contains(searchTitles.getText().trim().toLowerCase())) {
+                    projectsResults.add(aProjectsArrayList);
+                }
+            }
+            for (Object aProjectsArrayList : notesArrayList) {
+                if (aProjectsArrayList.toString().toLowerCase().contains(searchTitles.getText().trim().toLowerCase())) {
+                    notesResults.add(aProjectsArrayList);
+                }
+            }
+
+            projectsTab.setText("Projects (" + projectsResults.size() + ")");
+            notesTab.setText("Notes (" + notesResults.size() + ")");
+            if (projectsResults.isEmpty()) {
+                projectsResults.add("0 Results found");
+            }
+            if (notesResults.isEmpty()) {
+                notesResults.add("0 Results found");
+            }
+            ObservableList projectsObservableList = FXCollections.observableArrayList(reverse(projectsResults));
+            projectTitles.getItems().setAll(projectsObservableList);
+            projectTitles.getSelectionModel().selectFirst();
+            ObservableList notesObservableList = FXCollections.observableArrayList(reverse(notesResults));
+            noteTitles.getItems().setAll(notesObservableList);
+            noteTitles.getSelectionModel().selectFirst();
+
+
+        } else {
+            ObservableList projectsObservableList = FXCollections.observableArrayList(reverse(projectsArrayList));
+            projectTitles.getItems().setAll(projectsObservableList);
+            projectTitles.getSelectionModel().selectFirst();
+            ObservableList notesObservableList = FXCollections.observableArrayList(reverse(notesArrayList));
+            noteTitles.getItems().setAll(notesObservableList);
+            noteTitles.getSelectionModel().selectFirst();
+            projectsTab.setText("Projects (" + projectsArrayList.size() + ")");
+            notesTab.setText("Notes (" + notesArrayList.size() + ")");
         }
     }
 
