@@ -405,12 +405,46 @@ public class DatabaseOperations {
     /**
      * Edit note title
      *
-     * @param noteID
+     * @param title
      * @param body
      */
-    public void editNoteBody(int noteID, String body) {
-        String sql = "UPDATE NOTES SET BODY=? WHERE ID=?";
-        edit(noteID, body, sql);
+    public void editNoteBody(String title, String body) {
+        String sql = "UPDATE NOTES SET BODY=? WHERE TITLE=?";
+        query5(title, body, sql);
+    }
+
+    private void query5(String title, String body, String sql) {
+        try (Connection connection = this.connect();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, body);
+            preparedStatement.setString(2, title);
+            preparedStatement.executeUpdate();
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    /**
+     * get note body
+     *
+     * @param title
+     */
+    public String getNoteBody(String title) {
+        String sql = "SELECT BODY FROM  NOTES WHERE TITLE=?";
+        String body="";
+        try (Connection connection = this.connect();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, title);
+            ResultSet resultSet = preparedStatement.executeQuery();
+            while (resultSet.next()){
+                body=resultSet.getString("BODY");
+            }
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+        return  body;
     }
 
     /**
@@ -599,21 +633,14 @@ public class DatabaseOperations {
         String sql = "UPDATE PROJECTS SET NAME=? WHERE NAME=?";
         query4(oldName, newName, sql);
     }
+
     public void editNoteTitle(String oldName, String newName) {
         String sql = "UPDATE NOTES SET TITLE=? WHERE TITLE=?";
         query4(oldName, newName, sql);
     }
 
     private void query4(String oldName, String newName, String sql) {
-        try (Connection connection = this.connect();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, newName);
-            preparedStatement.setString(2, oldName);
-            preparedStatement.executeUpdate();
-
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
+        query5(oldName, newName, sql);
     }
 
 

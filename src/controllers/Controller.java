@@ -18,6 +18,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
+import javafx.scene.web.HTMLEditor;
 import javafx.util.Pair;
 
 import java.sql.Date;
@@ -33,7 +34,7 @@ public class Controller {
     @FXML
     private ListView projectTitles, noteTitles;
     @FXML
-    private Button addDescription, editDescription, saveNewTask;
+    private Button addDescription, editDescription, saveNewTask, saveNoteBody;
     @FXML
     private TabPane tabPane;
     @FXML
@@ -55,7 +56,7 @@ public class Controller {
     @FXML
     private ChoiceBox priorityBox;
     @FXML
-    private VBox viewBox;
+    private HTMLEditor noteBody;
 
     private String projectDescriptionText = "";
 
@@ -284,8 +285,16 @@ public class Controller {
     //populate the view pane with details of the selected project.
     public void onNoteClicked() {
         viewProjectTitle.setText(noteTitles.getSelectionModel().getSelectedItem().toString());
+        itemName = noteTitles.getSelectionModel().getSelectedItem().toString();
+        String body = databaseOperations.getNoteBody(itemName);
+        if (body != null) {
+            noteBody.setHtmlText(body);
+        } else {
+            noteBody.setHtmlText("");
+        }
         tasksPane.setText("Tasks");
         projectAccordion.setExpandedPane(notesPane);
+        saveNoteBody.setDisable(true);
 
     }
 
@@ -494,6 +503,19 @@ public class Controller {
         String day[] = dateTime[0].split("-");
         String time[] = dateTime[1].split(":");
         return day[0] + "-" + day[1] + "-" + day[2] + " " + time[0] + ":" + time[1];
+    }
+
+    public void saveNote() {
+        databaseOperations.editNoteBody(itemName, noteBody.getHtmlText().trim());
+        saveNoteBody.setDisable(true);
+    }
+
+    public void onTypingNoteBody() {
+        if (!noteBody.getHtmlText().trim().isEmpty()) {
+            saveNoteBody.setDisable(false);
+        } else {
+            saveNoteBody.setDisable(true);
+        }
     }
 
     public static class Task {
