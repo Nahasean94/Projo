@@ -188,6 +188,10 @@ public class Controller {
 
     private void fetchProjectTitles() {
         ArrayList arrayList = databaseOperations.loadProjectTitles();
+        if (arrayList.isEmpty()) {
+            tasksPane.setDisable(true);
+            descriptionPane.setDisable(true);
+        }
         if (!arrayList.isEmpty()) {
             try {
                 ObservableList observableList = FXCollections.observableArrayList(reverse(arrayList));
@@ -215,6 +219,9 @@ public class Controller {
 
     private void fetchNoteTitles() {
         ArrayList arrayList = databaseOperations.loadNoteTitles();
+        if (arrayList.isEmpty()) {
+            notesPane.setDisable(true);
+        }
         try {
             ObservableList observableList = FXCollections.observableArrayList(reverse(arrayList));
             noteTitles.setCellFactory(TextFieldListCell.forListView());
@@ -497,7 +504,7 @@ public class Controller {
 
     }
 
-
+    //format timestamp to human readable format
     private String formatTime(String date) {
         String dateTime[] = date.split(" ");
         String day[] = dateTime[0].split("-");
@@ -505,11 +512,13 @@ public class Controller {
         return day[0] + "-" + day[1] + "-" + day[2] + " " + time[0] + ":" + time[1];
     }
 
+    //save note
     public void saveNote() {
         databaseOperations.editNoteBody(itemName, noteBody.getHtmlText().trim());
         saveNoteBody.setDisable(true);
     }
 
+    //disable and enable save button when typing
     public void onTypingNoteBody() {
         if (!noteBody.getHtmlText().trim().isEmpty()) {
             saveNoteBody.setDisable(false);
