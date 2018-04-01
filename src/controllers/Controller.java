@@ -18,6 +18,7 @@ import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
@@ -310,7 +311,6 @@ public class Controller {
         priorityBox.setValue("Low");
         fetchProjectTasks();
         fetchProjectDescription();
-
         newTaskTextField.setOnKeyPressed(keyEvent ->
 
         {
@@ -497,8 +497,10 @@ public class Controller {
                 complete.selectedProperty().addListener((observable, oldValue, newValue) -> {
                     if (!!newValue) {
                         databaseOperations.markTaskAsComplete(id);
+                        fetchProjectTasks();
                     } else {
                         databaseOperations.markTaskAsIncomplete(id);
+                        fetchProjectTasks();
                     }
                 });
                 ChoiceBox priority = new ChoiceBox();
