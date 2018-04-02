@@ -580,13 +580,13 @@ public class DatabaseOperations {
 
     //fetch the tasks of a project
     public ArrayList<ArrayList> fetchTasks(int id) {
-        String sql = "SELECT * FROM TASKS WHERE PROJECT_ID=?";
-        ResultSet resultSet = null;
+        String sql = "SELECT * FROM TASKS WHERE PROJECT_ID=? ";
+
         ArrayList<ArrayList> arrayLists = new ArrayList<>();
         try (Connection conn = this.connect();
              PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
             preparedStatement.setInt(1, id);
-            resultSet = preparedStatement.executeQuery();
+            ResultSet resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
                 ArrayList arrayList = new ArrayList();
                 arrayList.add(resultSet.getInt("ID"));
