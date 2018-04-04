@@ -145,6 +145,25 @@ public class DatabaseOperations {
         return description;
 
     }
+    public ArrayList getProjectDates(String name) {
+        String sql = "SELECT DUE, DATE_CREATED FROM PROJECTS WHERE NAME=?";
+        ArrayList arrayList =new ArrayList();
+        ResultSet resultSet;
+        try (Connection conn = this.connect();
+             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            preparedStatement.setString(1, name);
+            resultSet = preparedStatement.executeQuery();
+            while ((resultSet.next())) {
+                arrayList.add(resultSet.getDate("DATE_CREATED"));
+                arrayList.add(resultSet.getDate("DUE"));
+            }
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+        return arrayList;
+
+    }
 
     /**
      * Mark project as complete
@@ -445,6 +464,23 @@ public class DatabaseOperations {
             System.out.println(e.getMessage());
         }
         return  body;
+    }
+    public String getNoteDate(String title) {
+        String sql = "SELECT DATE_CREATED FROM  NOTES WHERE TITLE=?";
+        Date date = null;
+        try (Connection connection = this.connect();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, title);
+            ResultSet resultSet = preparedStatement.executeQuery();
+            while (resultSet.next()){
+                date=resultSet.getDate("DATE_CREATED");
+            }
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+        assert date != null;
+        return  date.toString();
     }
 
     /**

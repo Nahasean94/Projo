@@ -12,6 +12,11 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldListCell;
 import javafx.scene.control.cell.TextFieldTableCell;
@@ -26,6 +31,11 @@ import javafx.scene.text.TextFlow;
 import javafx.scene.web.HTMLEditor;
 import javafx.util.Pair;
 
+import java.awt.*;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.sql.Array;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -45,7 +55,7 @@ public class Controller {
     @FXML
     private Tab projectsTab, notesTab;
     @FXML
-    private Label viewProjectTitle,percentage;
+    private Label viewProjectTitle, percentage;
     @FXML
     private Accordion projectAccordion;
     @FXML
@@ -210,9 +220,12 @@ public class Controller {
                 projectsTab.setText("Projects (" + projectsArrayList.size() + ")");
                 projectTitles.setCellFactory(TextFieldListCell.forListView());
                 projectTitles.setOnEditCommit((EventHandler<ListView.EditEvent<String>>) t -> {
-                    String oldValue = projectTitles.getSelectionModel().getSelectedItem().toString();
-                    projectTitles.getItems().set(t.getIndex(), t.getNewValue());
-                    databaseOperations.editProjectName(oldValue, t.getNewValue().toString());
+                    if (!t.getNewValue().isEmpty()) {
+
+                        String oldValue = projectTitles.getSelectionModel().getSelectedItem().toString();
+                        projectTitles.getItems().set(t.getIndex(), t.getNewValue());
+                        databaseOperations.editProjectName(oldValue, t.getNewValue().toString());
+                    }
                 });
                 projectTitles.setItems(observableList);
                 projectTitles.getSelectionModel().selectFirst();
@@ -249,9 +262,12 @@ public class Controller {
             noteTitles.setCellFactory(TextFieldListCell.forListView());
             notesTab.setText("Notes (" + notesArrayList.size() + ")");
             noteTitles.setOnEditCommit((EventHandler<ListView.EditEvent<String>>) t -> {
-                String oldValue = noteTitles.getSelectionModel().getSelectedItem().toString();
-                noteTitles.getItems().set(t.getIndex(), t.getNewValue());
-                databaseOperations.editNoteTitle(oldValue, t.getNewValue().toString());
+                if (!t.getNewValue().isEmpty()) {
+
+                    String oldValue = noteTitles.getSelectionModel().getSelectedItem().toString();
+                    noteTitles.getItems().set(t.getIndex(), t.getNewValue());
+                    databaseOperations.editNoteTitle(oldValue, t.getNewValue().toString());
+                }
             });
             noteTitles.setItems(observableList);
             noteTitles.getSelectionModel().selectFirst();
@@ -285,7 +301,13 @@ public class Controller {
             tasksPane.setDisable(false);
             notesPane.setDisable(true);
             metaBox.setVisible(true);
+            projectAccordion.setExpandedPane(tasksPane);
+            projectTitles.getSelectionModel().selectFirst();
+//            if (!projectTitles.getSelectionModel().getSelectedItem().toString().equals("0 Results found")){
             onProjectClicked();
+//            }
+//            else viewProjectTitle.setText("");
+
         }
     }
 
@@ -296,7 +318,10 @@ public class Controller {
             notesPane.setDisable(false);
             metaBox.setVisible(false);
             noteTitles.getSelectionModel().selectFirst();
+
             onNoteClicked();
+//            }
+//            else viewProjectTitle.setText("");
         }
     }
 
@@ -326,12 +351,15 @@ public class Controller {
         viewProjectTitle.setText(noteTitles.getSelectionModel().getSelectedItem().toString());
         itemName = noteTitles.getSelectionModel().getSelectedItem().toString();
         String body = databaseOperations.getNoteBody(itemName);
+        String created=databaseOperations.getNoteDate(itemName);
         if (body != null) {
             noteBody.setHtmlText(body);
         } else {
             noteBody.setHtmlText("");
         }
         tasksPane.setText("Tasks");
+        descriptionPane.setText("Description");
+        notesPane.setText("Take notes      Created: "+created);
         projectAccordion.setExpandedPane(notesPane);
         saveNoteBody.setDisable(true);
 
@@ -339,6 +367,10 @@ public class Controller {
 
     private void fetchProjectDescription() {
         String description = databaseOperations.getProjectDescription(itemName);
+        ArrayList arrayList = databaseOperations.getProjectDates(itemName);
+        String created = arrayList.get(0).toString();
+        String due = arrayList.get(1).toString();
+
         if (description.isEmpty()) {
             description = "Add a description for this project";
             addDescription.setDisable(false);
@@ -347,6 +379,11 @@ public class Controller {
             addDescription.setDisable(true);
             editDescription.setDisable(false);
             projectDescriptionText = description;
+        }
+        if (due.equals(created.split(" ")[0])) {
+            descriptionPane.setText("Description         Created: " + created);
+        } else {
+            descriptionPane.setText("Description         Created: " + created + "  Due: " + due);
         }
         projectDescription.getChildren().setAll(new Text(description));
 //        projectDescription.getChildren().add();
@@ -517,9 +554,11 @@ public class Controller {
                 //save the new value when a task name is edited
                 taskName.setOnEditCommit(
                         t -> {
-                            t.getTableView().getItems().get(
-                                    t.getTablePosition().getRow()).setTaskName(t.getNewValue());
-                            databaseOperations.editTaskName(id, t.getNewValue());
+                            if (!t.getNewValue().isEmpty()) {
+                                t.getTableView().getItems().get(
+                                        t.getTablePosition().getRow()).setTaskName(t.getNewValue());
+                                databaseOperations.editTaskName(id, t.getNewValue());
+                            }
                         }
                 );
 //initialize variable to help with the counter in table column
@@ -545,11 +584,11 @@ public class Controller {
 
     //calculate percentage completion of a project
     private void calculateCompletion(int completeTasks, int incompleteTasks) {
-        int total=completeTasks+incompleteTasks;
-        long percent=Math.round(((double)completeTasks/total)*100);
-        progressBar.setProgress((double)completeTasks/total);
+        int total = completeTasks + incompleteTasks;
+        long percent = Math.round(((double) completeTasks / total) * 100);
+        progressBar.setProgress((double) completeTasks / total);
 //        progressBar.setp;
-        percentage.setText(percent+" % complete");
+        percentage.setText(percent + " % complete");
 
     }
 
@@ -604,9 +643,11 @@ public class Controller {
             }
             ObservableList projectsObservableList = FXCollections.observableArrayList(reverse(projectsResults));
             projectTitles.getItems().setAll(projectsObservableList);
+//            if (!projectTitles.getSelectionModel().getSelectedItems().toString().equals("0 Results found"))
             projectTitles.getSelectionModel().selectFirst();
             ObservableList notesObservableList = FXCollections.observableArrayList(reverse(notesResults));
             noteTitles.getItems().setAll(notesObservableList);
+//            if (!noteTitles.getSelectionModel().getSelectedItems().toString().equals("0 Results found"))
             noteTitles.getSelectionModel().selectFirst();
 
 
@@ -619,6 +660,13 @@ public class Controller {
             noteTitles.getSelectionModel().selectFirst();
             projectsTab.setText("Projects (" + projectsArrayList.size() + ")");
             notesTab.setText("Notes (" + notesArrayList.size() + ")");
+        }
+    }
+    public void viewSourceCode(){
+        try {
+            Desktop.getDesktop().browse(new URL("https://github.com/Nahasean94/Projo").toURI());
+        } catch (IOException | URISyntaxException e) {
+            e.printStackTrace();
         }
     }
 
