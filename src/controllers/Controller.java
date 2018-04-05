@@ -2,19 +2,24 @@ package controllers;
 
 import database.DatabaseOperations;
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.Button;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -29,6 +34,8 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.scene.web.HTMLEditor;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 import javafx.util.Pair;
 
 import java.awt.*;
@@ -240,6 +247,34 @@ public class Controller {
                 onProjectClicked();
             }
         });
+        projectTitles.setCellFactory(lv -> {
+            ListCell<String> cell = new ListCell<>();
+            ContextMenu contextMenu = new ContextMenu();
+            MenuItem viewDetailsItem = new MenuItem();
+            viewDetailsItem.textProperty().bind(Bindings.format("View Details", cell.itemProperty()));
+            viewDetailsItem.setOnAction(event -> {
+                String item = cell.getItem();
+                // code to edit item...
+            });
+            MenuItem deleteItem = new MenuItem();
+            deleteItem.textProperty().bind(Bindings.format("Delete", cell.itemProperty()));
+            deleteItem.setOnAction(event -> {
+                databaseOperations.trashProject(cell.getItem());
+                projectTitles.getSelectionModel().selectFirst();
+                projectTitles.getItems().remove(cell.getItem());
+                fetchProjectTitles();
+            });
+            contextMenu.getItems().addAll(viewDetailsItem, deleteItem);
+            cell.textProperty().bind(cell.itemProperty());
+            cell.emptyProperty().addListener((obs, wasEmpty, isNowEmpty) -> {
+                if (isNowEmpty) {
+                    cell.setContextMenu(null);
+                } else {
+                    cell.setContextMenu(contextMenu);
+                }
+            });
+            return cell;
+        });
     }
 
     /**
@@ -275,6 +310,38 @@ public class Controller {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        noteTitles.setCellFactory(lv -> {
+
+            ListCell<String> cell = new ListCell<>();
+            ContextMenu contextMenu = new ContextMenu();
+
+            MenuItem viewDetailsItem = new MenuItem();
+            viewDetailsItem.textProperty().bind(Bindings.format("View Details", cell.itemProperty()));
+            viewDetailsItem.setOnAction(event -> {
+                String item = cell.getItem();
+                // code to edit item...
+            });
+
+            MenuItem deleteItem = new MenuItem();
+            deleteItem.textProperty().bind(Bindings.format("Delete", cell.itemProperty()));
+            deleteItem.setOnAction(event -> {
+                databaseOperations.trashNote(cell.getItem());
+                noteTitles.getSelectionModel().selectFirst();
+                noteTitles.getItems().remove(cell.getItem());
+               fetchNoteTitles();
+            });
+            contextMenu.getItems().addAll(viewDetailsItem, deleteItem);
+            cell.textProperty().bind(cell.itemProperty());
+            cell.emptyProperty().addListener((obs, wasEmpty, isNowEmpty) -> {
+                if (isNowEmpty) {
+                    cell.setContextMenu(null);
+                } else {
+                    cell.setContextMenu(contextMenu);
+                }
+            });
+            return cell;
+        });
+
     }
 
     private void saveNewProject(String title, LocalDate due) {
@@ -351,7 +418,7 @@ public class Controller {
         viewProjectTitle.setText(noteTitles.getSelectionModel().getSelectedItem().toString());
         itemName = noteTitles.getSelectionModel().getSelectedItem().toString();
         String body = databaseOperations.getNoteBody(itemName);
-        String created=databaseOperations.getNoteDate(itemName);
+        String created = databaseOperations.getNoteDate(itemName);
         if (body != null) {
             noteBody.setHtmlText(body);
         } else {
@@ -359,7 +426,7 @@ public class Controller {
         }
         tasksPane.setText("Tasks");
         descriptionPane.setText("Description");
-        notesPane.setText("Take notes      Created: "+created);
+        notesPane.setText("Take notes      Created: " + created);
         projectAccordion.setExpandedPane(notesPane);
         saveNoteBody.setDisable(true);
 
@@ -579,6 +646,27 @@ public class Controller {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        taskName.setCellFactory(lv -> {
+            TableCell<Task,String> cell = new TableCell<>();
+            ContextMenu contextMenu = new ContextMenu();
+
+            MenuItem deleteItem = new MenuItem();
+            deleteItem.textProperty().bind(Bindings.format("Delete", cell.itemProperty()));
+            deleteItem.setOnAction(event -> {
+                databaseOperations.trashTask(cell.getItem());
+                fetchProjectTasks();
+            });
+            contextMenu.getItems().addAll(deleteItem);
+            cell.textProperty().bind(cell.itemProperty());
+            cell.emptyProperty().addListener((obs, wasEmpty, isNowEmpty) -> {
+                if (isNowEmpty) {
+                    cell.setContextMenu(null);
+                } else {
+                    cell.setContextMenu(contextMenu);
+                }
+            });
+            return cell;
+        });
 
     }
 
@@ -662,10 +750,39 @@ public class Controller {
             notesTab.setText("Notes (" + notesArrayList.size() + ")");
         }
     }
-    public void viewSourceCode(){
+
+    public void viewSourceCode() {
         try {
             Desktop.getDesktop().browse(new URL("https://github.com/Nahasean94/Projo").toURI());
         } catch (IOException | URISyntaxException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void viewTrashedProjects() {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/fxml/trash_projects.fxml"));
+        trash(fxmlLoader);
+    }
+
+    public void viewTrashedNotes() {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/fxml/trash_notes.fxml"));
+        trash(fxmlLoader);
+    }
+
+    public void viewTrashedTasks() {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/fxml/trash_tasks.fxml"));
+        trash(fxmlLoader);
+    }
+
+    private void trash(FXMLLoader fxmlLoader) {
+        try {
+            Parent root = fxmlLoader.load();
+            Stage stage = new Stage();
+            stage.setTitle("Projects Trash");
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.setScene(new Scene(root));
+            stage.show();
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
