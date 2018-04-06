@@ -802,8 +802,16 @@ public class Controller {
             MenuItem deleteItem = new MenuItem();
             deleteItem.textProperty().bind(Bindings.format("Delete Permanently", cell.itemProperty()));
             deleteItem.setOnAction(event -> {
-                databaseOperations.eraseProject(cell.getItem());
-                projectsTrashTable(stage);
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("Confirm Deletion");
+                alert.setContentText("This operation cannot be Undone" );
+                alert.setHeaderText("Are you sure you want to permanently delete '"+cell.getItem()+"' ?");
+                Optional<ButtonType> result = alert.showAndWait();
+                if (result.get() == ButtonType.OK){
+                    databaseOperations.eraseProject(cell.getItem());
+                    projectsTrashTable(stage);
+                }
+
 
             });
             contextMenu.getItems().addAll(restoreItem, deleteItem);
@@ -888,8 +896,16 @@ public class Controller {
             MenuItem deleteItem = new MenuItem();
             deleteItem.textProperty().bind(Bindings.format("Delete Permanently", cell.itemProperty()));
             deleteItem.setOnAction(event -> {
-                databaseOperations.eraseNote(cell.getItem());
-                notesTrashTable(stage);
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("Confirm Deletion");
+                alert.setContentText("This operation cannot be Undone" );
+                alert.setHeaderText("Are you sure you want to permanently delete '"+cell.getItem()+"' ?");
+                Optional<ButtonType> result = alert.showAndWait();
+                if (result.get() == ButtonType.OK){
+                    databaseOperations.eraseNote(cell.getItem());
+                    notesTrashTable(stage);
+                }
+
             });
             contextMenu.getItems().addAll(restoreItem, deleteItem);
             cell.textProperty().bind(cell.itemProperty());
@@ -970,8 +986,15 @@ public class Controller {
             MenuItem deleteItem = new MenuItem();
             deleteItem.textProperty().bind(Bindings.format("Delete Permanently", cell.itemProperty()));
             deleteItem.setOnAction(event -> {
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("Confirm Deletion");
+                alert.setContentText("This operation cannot be Undone" );
+                alert.setHeaderText("Are you sure you want to permanently delete '"+cell.getItem()+"' ?");
+                Optional<ButtonType> result = alert.showAndWait();
+                if (result.get() == ButtonType.OK){
                 databaseOperations.eraseTask(cell.getItem());
                 trashTasksTable(stage);
+                }
             });
             contextMenu.getItems().addAll(restoreItem, deleteItem);
             cell.textProperty().bind(cell.itemProperty());
