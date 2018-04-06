@@ -145,9 +145,10 @@ public class DatabaseOperations {
         return description;
 
     }
+
     public ArrayList getProjectDates(String name) {
         String sql = "SELECT DUE, DATE_CREATED FROM PROJECTS WHERE NAME=?";
-        ArrayList arrayList =new ArrayList();
+        ArrayList arrayList = new ArrayList();
         ResultSet resultSet;
         try (Connection conn = this.connect();
              PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
@@ -235,20 +236,55 @@ public class DatabaseOperations {
     /**
      * Trash a project
      *
-     * @param id
-     * @param comment
+     * @param name
      */
-    public void trashProject(int id, String comment) {
-        String sql = "UPDATE PROJECTS SET TRASH=? WHERE ID=?";
+    public void trashProject(String name) {
+        String sql = "UPDATE PROJECTS SET TRASH=? WHERE NAME=?";
         try (Connection conn = this.connect();
              PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
             preparedStatement.setInt(1, 1);
-            preparedStatement.setInt(2, id);
+            preparedStatement.setString(2, name);
             preparedStatement.executeUpdate();
-            String sql2 = "INSERT INTO TRASH_PROJECTS(ID,PROJECT_ID,DATE_DELETED,COMMENT) VALUES(DEFAULT,?,DEFAULT,?)";
+            String sql2 = "INSERT INTO TRASH_PROJECTS(ID,PROJECT_NAME,DATE_DELETED) VALUES(DEFAULT,?,DEFAULT)";
             try (PreparedStatement preparedStatement2 = conn.prepareStatement(sql2)) {
-                preparedStatement2.setInt(1, id);
-                preparedStatement2.setString(2, comment);
+                preparedStatement2.setString(1, name);
+                preparedStatement2.executeUpdate();
+            } catch (SQLException e) {
+                System.out.println(e.getMessage());
+            }
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    /**
+     * Trash a task
+     *
+     * @param name
+     */
+    public void trashTask(String name) {
+        String sql = "UPDATE TASKS SET TRASHED=? WHERE NAME=?";
+        try (Connection conn = this.connect();
+             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            preparedStatement.setInt(1, 1);
+            preparedStatement.setString(2, name);
+            preparedStatement.executeUpdate();
+            String getProjectID = "SELECT PROJECT_ID FROM TASKS WHERE NAME=?";
+            int id = 0;
+            try (PreparedStatement preparedStatement2 = conn.prepareStatement(getProjectID)) {
+                preparedStatement2.setString(1, name);
+                ResultSet resultSet = preparedStatement2.executeQuery();
+                if (resultSet.next()) {
+                    id = resultSet.getInt("PROJECT_ID");
+                }
+            } catch (SQLException e) {
+                System.out.println(e.getMessage());
+            }
+            String sql2 = "INSERT INTO TRASH_TASKS(ID,TASK_NAME,PROJECT_ID,DATE_DELETED) VALUES(DEFAULT,?,?,DEFAULT)";
+            try (PreparedStatement preparedStatement2 = conn.prepareStatement(sql2)) {
+                preparedStatement2.setString(1, name);
+                preparedStatement2.setInt(2, id);
                 preparedStatement2.executeUpdate();
             } catch (SQLException e) {
                 System.out.println(e.getMessage());
@@ -312,7 +348,7 @@ public class DatabaseOperations {
      * @param projectID
      */
     public void createTask(String name, int projectID, String priority) {
-        String sql = "INSERT INTO TASKS (ID,NAME,COMPLETE,PROJECT_ID,DATE_CREATED,TRASH,PRIORITY) VALUES (DEFAULT,? ,DEFAULT,?,DEFAULT,DEFAULT,?)";
+        String sql = "INSERT INTO TASKS (ID,NAME,COMPLETE,PROJECT_ID,DATE_CREATED,TRASHED,PRIORITY) VALUES (DEFAULT,? ,DEFAULT,?,DEFAULT,DEFAULT,?)";
         try (Connection conn = this.connect();
              PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
             preparedStatement.setString(1, name);
@@ -451,20 +487,21 @@ public class DatabaseOperations {
      */
     public String getNoteBody(String title) {
         String sql = "SELECT BODY FROM  NOTES WHERE TITLE=?";
-        String body="";
+        String body = "";
         try (Connection connection = this.connect();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setString(1, title);
             ResultSet resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()){
-                body=resultSet.getString("BODY");
+            while (resultSet.next()) {
+                body = resultSet.getString("BODY");
             }
 
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
-        return  body;
+        return body;
     }
+
     public String getNoteDate(String title) {
         String sql = "SELECT DATE_CREATED FROM  NOTES WHERE TITLE=?";
         Date date = null;
@@ -472,15 +509,15 @@ public class DatabaseOperations {
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setString(1, title);
             ResultSet resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()){
-                date=resultSet.getDate("DATE_CREATED");
+            while (resultSet.next()) {
+                date = resultSet.getDate("DATE_CREATED");
             }
 
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
         assert date != null;
-        return  date.toString();
+        return date.toString();
     }
 
     /**
@@ -493,12 +530,30 @@ public class DatabaseOperations {
     }
 
     /**
-     * @param id
+     * @param title
      */
-    public void trashNote(int id) {
-        String sql = "UPDATE NOTES SET TRASHED=? WHERE ID=?";
-        trash(id, sql);
+    public void trashNote(String title) {
+        String sql = "UPDATE NOTES SET TRASHED=? WHERE TITLE=?";
+        ;
+        try (Connection conn = this.connect();
+             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            preparedStatement.setInt(1, 1);
+            preparedStatement.setString(2, title);
+            preparedStatement.executeUpdate();
+            int id = 0;
+            String sql2 = "INSERT INTO TRASH_NOTES(ID,NOTE_TITLE,DATE_DELETED) VALUES(DEFAULT,?,DEFAULT)";
+            try (PreparedStatement preparedStatement2 = conn.prepareStatement(sql2)) {
+                preparedStatement2.setString(1, title);
+                preparedStatement2.executeUpdate();
+            } catch (SQLException e) {
+                System.out.println(e.getMessage());
+            }
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
     }
+
 
     private void trash(int id, String sql) {
         try (Connection conn = this.connect();
@@ -553,10 +608,9 @@ public class DatabaseOperations {
      * Fetch all project tiles
      */
     public ArrayList loadProjectTitles() {
-        String sql = "SELECT * FROM PROJECTS";
+        String sql = "SELECT * FROM PROJECTS WHERE TRASH=0";
         ResultSet resultSet;
         ArrayList arrayList = new ArrayList();
-
         try (Connection conn = this.connect();
              PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
             resultSet = preparedStatement.executeQuery();
@@ -572,10 +626,9 @@ public class DatabaseOperations {
     }
 
     public ArrayList loadNoteTitles() {
-        String sql = "SELECT * FROM NOTES";
-        ResultSet resultSet = null;
+        String sql = "SELECT * FROM NOTES WHERE TRASHED=0";
+        ResultSet resultSet;
         ArrayList arrayList = new ArrayList();
-
         try (Connection conn = this.connect();
              PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
             resultSet = preparedStatement.executeQuery();
@@ -616,7 +669,7 @@ public class DatabaseOperations {
 
     //fetch the tasks of a project
     public ArrayList<ArrayList> fetchTasks(int id) {
-        String sql = "SELECT * FROM TASKS WHERE PROJECT_ID=? ";
+        String sql = "SELECT * FROM TASKS WHERE PROJECT_ID=? AND TRASHED=0";
 
         ArrayList<ArrayList> arrayLists = new ArrayList<>();
         try (Connection conn = this.connect();
@@ -679,5 +732,73 @@ public class DatabaseOperations {
         query5(oldName, newName, sql);
     }
 
+    public ArrayList<ArrayList> fetchTrashedProjects() {
+        String sql = "SELECT * FROM TRASH_PROJECTS";
+        ArrayList arrayList = new ArrayList();
+        try (Connection connection = this.connect();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            ResultSet resultSet = preparedStatement.executeQuery();
+            int count = 1;
+            while (resultSet.next()) {
+                ArrayList arrayList1 = new ArrayList();
+                arrayList1.add(count++);
+                arrayList1.add(resultSet.getString("PROJECT_NAME"));
+                arrayList1.add(resultSet.getString("DATE_DELETED"));
+                arrayList.add(arrayList1);
+            }
+        } catch (SQLException e) {
+            e.getMessage();
+        }
+        return arrayList;
+    }
 
+    public ArrayList<ArrayList> fetchTrashedNotes() {
+        String sql = "SELECT * FROM TRASH_NOTES";
+        ArrayList arrayList = new ArrayList();
+        try (Connection connection = this.connect();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            ResultSet resultSet = preparedStatement.executeQuery();
+            int count = 1;
+            while (resultSet.next()) {
+                ArrayList arrayList1 = new ArrayList();
+                arrayList1.add(count++);
+                arrayList1.add(resultSet.getString("NOTE_TITLE"));
+                arrayList1.add(resultSet.getString("DATE_DELETED"));
+                arrayList.add(arrayList1);
+            }
+        } catch (SQLException e) {
+            e.getMessage();
+        }
+        return arrayList;
+    }
+
+    public ArrayList<ArrayList> fetchTrashedTasks() {
+        String sql = "SELECT * FROM TRASH_TASKS";
+        ArrayList arrayList = new ArrayList();
+        try (Connection connection = this.connect();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            ResultSet resultSet = preparedStatement.executeQuery();
+            int count = 1;
+            while (resultSet.next()) {
+                ArrayList arrayList1 = new ArrayList();
+                arrayList1.add(count++);
+                int id = resultSet.getInt("PROJECT_ID");
+                arrayList1.add(resultSet.getString("TASK_NAME"));
+                arrayList1.add(resultSet.getString("DATE_DELETED"));
+                String getProjectName = "SELECT NAME FROM PROJECTS WHERE ID=?";
+                try (Connection connection1 = this.connect();
+                     PreparedStatement preparedStatement1 = connection1.prepareStatement(getProjectName)) {
+                    preparedStatement1.setInt(1, id);
+                    ResultSet resultSet1 = preparedStatement1.executeQuery();
+                    while (resultSet1.next()) {
+                        arrayList1.add(resultSet1.getString("NAME"));
+                    }
+                }
+                arrayList.add(arrayList1);
+            }
+        } catch (SQLException e) {
+            e.getMessage();
+        }
+        return arrayList;
+    }
 }
