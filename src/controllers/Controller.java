@@ -9,11 +9,8 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.Button;
@@ -26,7 +23,6 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldListCell;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
@@ -39,7 +35,6 @@ import java.awt.*;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.sql.Array;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -70,7 +65,6 @@ public class Controller {
     private TextField newTaskTextField, searchTitles;
     @FXML
     private TableColumn<Task, String> taskName, taskCount, taskDate, taskComplete, taskPriority;
-
     @FXML
     private TableView tasksTable;
     @FXML
@@ -392,22 +386,23 @@ public class Controller {
 
     //populate the view pane with details of the selected project.
     public void onProjectClicked() {
-
         viewProjectTitle.setText(projectTitles.getSelectionModel().getSelectedItem().toString());
         projectAccordion.setExpandedPane(tasksPane);
         itemName = projectTitles.getSelectionModel().getSelectedItem().toString();
         itemId = databaseOperations.getItemId(itemName);
-        priorityBox.getItems().setAll("Low", "Medium", "High");
-        priorityBox.setValue("Low");
-        fetchProjectTasks();
-        fetchProjectDescription();
-        newTaskTextField.setOnKeyPressed(keyEvent ->
+        if (itemId != 0) {
+            priorityBox.getItems().setAll("Low", "Medium", "High");
+            priorityBox.setValue("Low");
+            fetchProjectTasks();
+            fetchProjectDescription();
+            newTaskTextField.setOnKeyPressed(keyEvent ->
 
-        {
-            if (keyEvent.getCode() == KeyCode.ENTER) {
-                addProjectTask();
-            }
-        });
+            {
+                if (keyEvent.getCode() == KeyCode.ENTER) {
+                    addProjectTask();
+                }
+            });
+        }
 
     }
 
@@ -758,135 +753,244 @@ public class Controller {
     }
 
     public void viewTrashedProjects() {
-//        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/fxml/trash_projects.fxml"));
-//        trash(fxmlLoader);
+        Stage stage = new Stage();
+        projectsTrashTable(stage);
+        stage.setTitle("Projects Trash");
+        stage.setResizable(false);
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.showAndWait();
+
+    }
+
+    private void projectsTrashTable(Stage stage) {
         ArrayList<ArrayList> arrayLists = databaseOperations.fetchTrashedProjects();
-        TableView projectsTrash=new TableView();
-        TableColumn<TrashedProjects,String> trashProjectCount=new TableColumn<>("#");
+        TableView projectsTrash = new TableView();
+        TableColumn<TrashedProjects, String> trashProjectCount = new TableColumn<>("#");
         trashProjectCount.setPrefWidth(50);
-        TableColumn<TrashedProjects,String> trashProjectName=new TableColumn<>("Name");
+        TableColumn<TrashedProjects, String> trashProjectName = new TableColumn<>("Name");
         trashProjectName.setPrefWidth(600);
-        TableColumn<TrashedProjects,String> trashProjectDeleteDate=new TableColumn<>("Date Deleted");
+        TableColumn<TrashedProjects, String> trashProjectDeleteDate = new TableColumn<>("Date Deleted");
         trashProjectDeleteDate.setPrefWidth(100);
+        ObservableList<TrashedProjects> data = FXCollections.observableArrayList();
         try {
-            ObservableList<TrashedProjects> data = FXCollections.observableArrayList();
 //iterate through each element of the arraylist
-            for (int i = 0;i<arrayLists.size() ; i++) {
-                SimpleIntegerProperty id =new SimpleIntegerProperty((Integer)arrayLists.get(i).get(0));
-                SimpleStringProperty name = new SimpleStringProperty(arrayLists.get(i).get(1).toString());
-                SimpleStringProperty date = new SimpleStringProperty(formatTime(arrayLists.get(i).get(2).toString()));
-                data.add(new TrashedProjects(name,id,date));
+            for (ArrayList arrayList : arrayLists) {
+                SimpleIntegerProperty id = new SimpleIntegerProperty((Integer) arrayList.get(0));
+                SimpleStringProperty name = new SimpleStringProperty(arrayList.get(1).toString());
+                SimpleStringProperty date = new SimpleStringProperty(formatTime(arrayList.get(2).toString()));
+                data.add(new TrashedProjects(name, id, date));
 //obtain the value of each column
                 trashProjectCount.setCellValueFactory(new PropertyValueFactory<>("projectId"));
                 trashProjectName.setCellValueFactory(new PropertyValueFactory<>("projectName"));
                 trashProjectDeleteDate.setCellValueFactory(new PropertyValueFactory<>("dateDeleted"));
             }
-            projectsTrash.setItems(data);
-            projectsTrash.getColumns().addAll(trashProjectCount,trashProjectName,trashProjectDeleteDate);
-            VBox root = new VBox();
-            root.setPadding(new Insets(10, 10, 10, 10));
-            projectsTrash.setPrefSize(750,500);
-
-            root.getChildren().addAll(projectsTrash);
-            Stage stage = new Stage();
-            stage.setTitle("Projects Trash");
-            stage.setResizable(false);
-            stage.initModality(Modality.APPLICATION_MODAL);
-            stage.setScene(new Scene(root,772,521));
-            stage.showAndWait();
-
         } catch (Exception e) {
             e.printStackTrace();
         }
+        trashProjectName.setCellFactory(lv -> {
+            TableCell<TrashedProjects, String> cell = new TableCell<>();
+            ContextMenu contextMenu = new ContextMenu();
 
+            MenuItem restoreItem = new MenuItem();
+            restoreItem.textProperty().bind(Bindings.format("Restore", cell.itemProperty()));
+            restoreItem.setOnAction(event -> {
+                databaseOperations.restoreProject(cell.getItem());
+                projectsTrashTable(stage);
+                tabPane.getSelectionModel().selectFirst();
+                fetchProjectTitles();
+            });
+            MenuItem deleteItem = new MenuItem();
+            deleteItem.textProperty().bind(Bindings.format("Delete Permanently", cell.itemProperty()));
+            deleteItem.setOnAction(event -> {
+//                    databaseOperations.restoreProject(cell.getItem());
+//                    viewTrashedProjects();
+            });
+            contextMenu.getItems().addAll(restoreItem, deleteItem);
+            cell.textProperty().bind(cell.itemProperty());
+            cell.emptyProperty().addListener((obs, wasEmpty, isNowEmpty) -> {
+                if (isNowEmpty) {
+                    cell.setContextMenu(null);
+                } else {
+                    cell.setContextMenu(contextMenu);
+                }
+            });
+            return cell;
+        });
+
+        projectsTrash.setItems(data);
+        projectsTrash.getColumns().addAll(trashProjectCount, trashProjectName, trashProjectDeleteDate);
+        projectsTrash.setPrefSize(750, 500);
+        VBox root = new VBox();
+        root.setPadding(new Insets(10, 10, 10, 10));
+
+        root.getChildren().addAll(projectsTrash);
+        stage.setScene(new Scene(root, 772, 521));
+
+
+//    return projectsTrash;
     }
 
     public void viewTrashedNotes() {
+
+        Stage stage = new Stage();
+        notesTrashTable(stage);
+        stage.setTitle("Notes Trash");
+        stage.setResizable(false);
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.showAndWait();
+
+
+    }
+
+    private void notesTrashTable(Stage stage) {
         ArrayList<ArrayList> arrayLists = databaseOperations.fetchTrashedNotes();
-        TableView notesTrash=new TableView();
-        TableColumn<TrashedProjects,String> trashNoteCount=new TableColumn<>("#");
+        TableView notesTrash = new TableView();
+        TableColumn<TrashedNotes, String> trashNoteCount = new TableColumn<>("#");
         trashNoteCount.setPrefWidth(50);
-        TableColumn<TrashedProjects,String> trashNoteName=new TableColumn<>("Name");
+        TableColumn<TrashedNotes, String> trashNoteName = new TableColumn<>("Name");
         trashNoteName.setPrefWidth(600);
-        TableColumn<TrashedProjects,String> trashNoteDeleteDate=new TableColumn<>("Date Deleted");
+        TableColumn<TrashedNotes, String> trashNoteDeleteDate = new TableColumn<>("Date Deleted");
         trashNoteDeleteDate.setPrefWidth(100);
+        ObservableList<TrashedNotes> data = FXCollections.observableArrayList();
         try {
-            ObservableList<TrashedNotes> data = FXCollections.observableArrayList();
 //iterate through each element of the arraylist
-            for (int i = 0;i<arrayLists.size() ; i++) {
-                SimpleIntegerProperty id =new SimpleIntegerProperty((Integer)arrayLists.get(i).get(0));
-                SimpleStringProperty name = new SimpleStringProperty(arrayLists.get(i).get(1).toString());
-                SimpleStringProperty date = new SimpleStringProperty(formatTime(arrayLists.get(i).get(2).toString()));
-                data.add(new TrashedNotes(name,id,date));
+            for (ArrayList arrayList : arrayLists) {
+                SimpleIntegerProperty id = new SimpleIntegerProperty((Integer) arrayList.get(0));
+                SimpleStringProperty name = new SimpleStringProperty(arrayList.get(1).toString());
+                SimpleStringProperty date = new SimpleStringProperty(formatTime(arrayList.get(2).toString()));
+                data.add(new TrashedNotes(name, id, date));
 //obtain the value of each column
                 trashNoteCount.setCellValueFactory(new PropertyValueFactory<>("noteId"));
                 trashNoteName.setCellValueFactory(new PropertyValueFactory<>("noteName"));
                 trashNoteDeleteDate.setCellValueFactory(new PropertyValueFactory<>("dateDeleted"));
             }
-            notesTrash.setItems(data);
-            notesTrash.getColumns().addAll(trashNoteCount,trashNoteName,trashNoteDeleteDate);
-            VBox root = new VBox();
-            root.setPadding(new Insets(10, 10, 10, 10));
-            notesTrash.setPrefSize(750,500);
-
-            root.getChildren().addAll(notesTrash);
-            Stage stage = new Stage();
-            stage.setTitle("Notes Trash");
-            stage.setResizable(false);
-            stage.initModality(Modality.APPLICATION_MODAL);
-            stage.setScene(new Scene(root,772,521));
-            stage.showAndWait();
-
         } catch (Exception e) {
             e.printStackTrace();
         }
+        trashNoteName.setCellFactory(lv -> {
+            TableCell<TrashedNotes, String> cell = new TableCell<>();
+            ContextMenu contextMenu = new ContextMenu();
+
+            MenuItem restoreItem = new MenuItem();
+            restoreItem.textProperty().bind(Bindings.format("Restore", cell.itemProperty()));
+            restoreItem.setOnAction(event -> {
+                databaseOperations.restoreNote(cell.getItem());
+                tabPane.getSelectionModel().selectLast();
+                notesTrashTable(stage);
+                fetchNoteTitles();
+                if (notesTrash.getSelectionModel().getSelectedItem() != null) {
+                    TrashedNotes selectedTask = (TrashedNotes) notesTrash.getSelectionModel().getSelectedItem();
+                    noteTitles.getSelectionModel().select(selectedTask.getNoteName());
+                    onNoteClicked();
+                }
+            });
+            MenuItem deleteItem = new MenuItem();
+            deleteItem.textProperty().bind(Bindings.format("Delete Permanently", cell.itemProperty()));
+            deleteItem.setOnAction(event -> {
+//                    databaseOperations.restoreProject(cell.getItem());
+//                    viewTrashedProjects();
+            });
+            contextMenu.getItems().addAll(restoreItem, deleteItem);
+            cell.textProperty().bind(cell.itemProperty());
+            cell.emptyProperty().addListener((obs, wasEmpty, isNowEmpty) -> {
+                if (isNowEmpty) {
+                    cell.setContextMenu(null);
+                } else {
+                    cell.setContextMenu(contextMenu);
+                }
+            });
+            return cell;
+        });
+
+        notesTrash.setItems(data);
+        notesTrash.getColumns().addAll(trashNoteCount, trashNoteName, trashNoteDeleteDate);
+        VBox root = new VBox();
+        root.setPadding(new Insets(10, 10, 10, 10));
+        notesTrash.setPrefSize(750, 500);
+        root.getChildren().addAll(notesTrash);
+        stage.setScene(new Scene(root, 772, 521));
     }
+
     public void viewTrashedTasks() {
+        Stage stage = new Stage();
+        trashTasksTable(stage);
+        stage.setTitle("Tasks Trash");
+        stage.setResizable(false);
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.showAndWait();
+    }
+
+    private void trashTasksTable(Stage stage) {
         ArrayList<ArrayList> arrayLists = databaseOperations.fetchTrashedTasks();
-        TableView notesTrash=new TableView();
-        TableColumn<TrashedProjects,String> trashTaskCount=new TableColumn<>("#");
+        TableView tasksTrash = new TableView();
+        TableColumn<TrashedTasks, String> trashTaskCount = new TableColumn<>("#");
         trashTaskCount.setPrefWidth(50);
-        TableColumn<TrashedProjects,String> trashTaskName=new TableColumn<>("Name");
+        TableColumn<TrashedTasks, String> trashTaskName = new TableColumn<>("Name");
         trashTaskName.setPrefWidth(400);
-        TableColumn<TrashedProjects,String> trashTaskProjectName=new TableColumn<>("Project");
+        TableColumn<TrashedTasks, String> trashTaskProjectName = new TableColumn<>("Project");
         trashTaskProjectName.setPrefWidth(200);
-        TableColumn<TrashedProjects,String> trashTaskDeleteDate=new TableColumn<>("Date Deleted");
+        TableColumn<TrashedTasks, String> trashTaskDeleteDate = new TableColumn<>("Date Deleted");
         trashTaskDeleteDate.setPrefWidth(100);
+        ObservableList<TrashedTasks> data = FXCollections.observableArrayList();
         try {
-            ObservableList<TrashedTasks> data = FXCollections.observableArrayList();
 //iterate through each element of the arraylist
-            for (int i = 0;i<arrayLists.size() ; i++) {
-                SimpleIntegerProperty id =new SimpleIntegerProperty((Integer)arrayLists.get(i).get(0));
-                SimpleStringProperty name = new SimpleStringProperty(arrayLists.get(i).get(1).toString());
-                SimpleStringProperty projectName = new SimpleStringProperty(arrayLists.get(i).get(3).toString());
-                SimpleStringProperty date = new SimpleStringProperty(formatTime(arrayLists.get(i).get(2).toString()));
-                data.add(new TrashedTasks(name,id,date,projectName));
+            for (ArrayList arrayList : arrayLists) {
+                SimpleIntegerProperty id = new SimpleIntegerProperty((Integer) arrayList.get(0));
+                SimpleStringProperty name = new SimpleStringProperty(arrayList.get(1).toString());
+                SimpleStringProperty projectName = new SimpleStringProperty(arrayList.get(3).toString());
+                SimpleStringProperty date = new SimpleStringProperty(formatTime(arrayList.get(2).toString()));
+                data.add(new TrashedTasks(name, id, date, projectName));
 //obtain the value of each column
                 trashTaskCount.setCellValueFactory(new PropertyValueFactory<>("taskId"));
                 trashTaskName.setCellValueFactory(new PropertyValueFactory<>("taskName"));
                 trashTaskProjectName.setCellValueFactory(new PropertyValueFactory<>("projectName"));
                 trashTaskDeleteDate.setCellValueFactory(new PropertyValueFactory<>("dateDeleted"));
             }
-            notesTrash.setItems(data);
-            notesTrash.getColumns().addAll(trashTaskCount,trashTaskName,trashTaskProjectName,trashTaskDeleteDate);
-            VBox root = new VBox();
-            root.setPadding(new Insets(10, 10, 10, 10));
-            notesTrash.setPrefSize(750,500);
-
-            root.getChildren().addAll(notesTrash);
-            Stage stage = new Stage();
-            stage.setTitle("Tasks Trash");
-            stage.setResizable(false);
-            stage.initModality(Modality.APPLICATION_MODAL);
-            stage.setScene(new Scene(root,772,521));
-            stage.showAndWait();
-
         } catch (Exception e) {
             e.printStackTrace();
         }
+        trashTaskName.setCellFactory(lv -> {
+            TableCell<TrashedTasks, String> cell = new TableCell<>();
+            ContextMenu contextMenu = new ContextMenu();
+
+            MenuItem restoreItem = new MenuItem();
+            restoreItem.textProperty().bind(Bindings.format("Restore", cell.itemProperty()));
+            restoreItem.setOnAction(event -> {
+                databaseOperations.restoreTask(cell.getItem());
+                tabPane.getSelectionModel().selectFirst();
+                trashTasksTable(stage);
+                fetchProjectTitles();
+                if (tasksTrash.getSelectionModel().getSelectedItem() != null) {
+                    TrashedTasks selectedTask = (TrashedTasks) tasksTrash.getSelectionModel().getSelectedItem();
+                    projectTitles.getSelectionModel().select(selectedTask.getProjectName());
+                    onProjectClicked();
+                }
+            });
+            MenuItem deleteItem = new MenuItem();
+            deleteItem.textProperty().bind(Bindings.format("Delete Permanently", cell.itemProperty()));
+            deleteItem.setOnAction(event -> {
+//                    databaseOperations.restoreProject(cell.getItem());
+//                    viewTrashedProjects();
+            });
+            contextMenu.getItems().addAll(restoreItem, deleteItem);
+            cell.textProperty().bind(cell.itemProperty());
+            cell.emptyProperty().addListener((obs, wasEmpty, isNowEmpty) -> {
+                if (isNowEmpty) {
+                    cell.setContextMenu(null);
+                } else {
+                    cell.setContextMenu(contextMenu);
+                }
+            });
+            return cell;
+        });
+        tasksTrash.setItems(data);
+        tasksTrash.getColumns().addAll(trashTaskCount, trashTaskName, trashTaskProjectName, trashTaskDeleteDate);
+        VBox root = new VBox();
+        root.setPadding(new Insets(10, 10, 10, 10));
+        tasksTrash.setPrefSize(750, 500);
+        root.getChildren().addAll(tasksTrash);
+        stage.setScene(new Scene(root, 772, 521));
     }
-
-
 
 
     public static class Task {
@@ -989,6 +1093,7 @@ public class Controller {
         public void setProjectName(String projectName) {
             this.projectName.set(projectName);
         }
+
         public int getProjectId() {
             return projectId.get();
         }
@@ -1018,6 +1123,7 @@ public class Controller {
         private SimpleStringProperty noteName;
         private SimpleStringProperty dateDeleted;
         private SimpleIntegerProperty noteId;
+
         public TrashedNotes(SimpleStringProperty noteName, SimpleIntegerProperty noteId, SimpleStringProperty dateDeleted) {
             this.noteName = noteName;
             this.dateDeleted = dateDeleted;
@@ -1036,6 +1142,7 @@ public class Controller {
         public void setNoteName(String noteName) {
             this.noteName.set(noteName);
         }
+
         public int getNoteId() {
             return noteId.get();
         }
@@ -1047,6 +1154,7 @@ public class Controller {
         public void setNoteId(int noteId) {
             this.noteId.set(noteId);
         }
+
         public String getDateDeleted() {
             return dateDeleted.get();
         }
@@ -1065,6 +1173,7 @@ public class Controller {
         private SimpleStringProperty dateDeleted;
         private SimpleStringProperty projectName;
         private SimpleIntegerProperty taskId;
+
         public TrashedTasks(SimpleStringProperty taskName, SimpleIntegerProperty taskId, SimpleStringProperty dateDeleted, SimpleStringProperty projectName) {
             this.taskName = taskName;
             this.dateDeleted = dateDeleted;
@@ -1096,6 +1205,7 @@ public class Controller {
         public void setProjectName(String projectName) {
             this.projectName.set(projectName);
         }
+
         public int getTaskId() {
             return taskId.get();
         }
@@ -1107,6 +1217,7 @@ public class Controller {
         public void setTaskId(int taskId) {
             this.taskId.set(taskId);
         }
+
         public String getDateDeleted() {
             return dateDeleted.get();
         }

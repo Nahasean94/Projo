@@ -298,19 +298,18 @@ public class DatabaseOperations {
     /**
      * Restore a trashed  project
      *
-     * @param id
-     * @param projectId
+     * @param naem
      */
-    public void restoreProject(int id, int projectId) {
-        String sql = "UPDATE PROJECTS SET TRASH=? WHERE ID=?";
+    public void restoreProject(String name) {
+        String sql = "UPDATE PROJECTS SET TRASH=? WHERE NAME=?";
         try (Connection conn = this.connect();
              PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
             preparedStatement.setInt(1, 0);
-            preparedStatement.setInt(2, projectId);
+            preparedStatement.setString(2, name);
             preparedStatement.executeUpdate();
-            String sql2 = "DELETE FROM TRASH_PROJECTS WHERE ID=?";
+            String sql2 = "DELETE FROM TRASH_PROJECTS WHERE PROJECT_NAME=?";
             try (PreparedStatement preparedStatement2 = conn.prepareStatement(sql2)) {
-                preparedStatement2.setInt(1, id);
+                preparedStatement2.setString(1, name);
                 preparedStatement2.executeUpdate();
             } catch (SQLException e) {
                 System.out.println(e.getMessage());
@@ -569,23 +568,50 @@ public class DatabaseOperations {
     /**
      * Restore a deleted note
      *
-     * @param id
+     * @param title
      */
-    public void restoreNote(int id) {
-        String sql = "UPDATE NOTES SET TRASHED=? WHERE ID=?";
+    public void restoreNote(String title) {
+        String sql = "UPDATE NOTES SET TRASHED=? WHERE TITLE=?";
         try (Connection conn = this.connect();
              PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
             preparedStatement.setInt(1, 0);
-            preparedStatement.setInt(2, id);
+            preparedStatement.setString(2, title);
             preparedStatement.executeUpdate();
-            String sql2 = "DELETE FROM TRASH_NOTES WHERE ID=?";
+            String sql2 = "DELETE FROM TRASH_NOTES WHERE NOTE_TITLE=?";
             try (Connection conn2 = this.connect();
                  PreparedStatement preparedStatement2 = conn2.prepareStatement(sql2)) {
-                preparedStatement2.setInt(1, id);
+                preparedStatement2.setString(1, title);
                 preparedStatement2.executeUpdate();
             } catch (SQLException e) {
                 System.out.println(e.getMessage());
             }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+    public void restoreTask(String name) {
+        String sql = "UPDATE TASKS SET TRASHED=? WHERE NAME=?";
+        try (Connection conn = this.connect();
+             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            preparedStatement.setInt(1, 0);
+            preparedStatement.setString(2, name);
+            preparedStatement.executeUpdate();
+            String sql2 = "DELETE FROM TRASH_TASKS WHERE TASK_NAME=?";
+            try (Connection conn2 = this.connect();
+                 PreparedStatement preparedStatement2 = conn2.prepareStatement(sql2)) {
+                preparedStatement2.setString(1, name);
+                preparedStatement2.executeUpdate();
+            } catch (SQLException e) {
+                System.out.println(e.getMessage());
+            }
+//            String sql3 = "SELECT PROJECT_NAME FROM TRASH_TASKS WHERE TASK_NAME=?";
+//            try (Connection conn3 = this.connect();
+//                 PreparedStatement preparedStatement3 = conn3.prepareStatement(sql3)) {
+//                preparedStatement3.setString(1, name);
+//                preparedStatement3.executeUpdate();
+//            } catch (SQLException e) {
+//                System.out.println(e.getMessage());
+//            }
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
