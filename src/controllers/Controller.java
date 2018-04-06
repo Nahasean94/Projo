@@ -251,10 +251,18 @@ public class Controller {
             MenuItem deleteItem = new MenuItem();
             deleteItem.textProperty().bind(Bindings.format("Delete", cell.itemProperty()));
             deleteItem.setOnAction(event -> {
-                databaseOperations.trashProject(cell.getItem());
-                projectTitles.getSelectionModel().selectFirst();
-                projectTitles.getItems().remove(cell.getItem());
-                fetchProjectTitles();
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("Confirm Deletion");
+                alert.setContentText("This project will trashed" );
+                alert.setHeaderText("Are you sure you want to move '"+cell.getItem()+"' to trash?");
+                Optional<ButtonType> result = alert.showAndWait();
+                if (result.get() == ButtonType.OK){
+                    databaseOperations.trashProject(cell.getItem());
+                    projectTitles.getSelectionModel().selectFirst();
+                    projectTitles.getItems().remove(cell.getItem());
+                    fetchProjectTitles();
+                }
+
             });
             contextMenu.getItems().addAll(viewDetailsItem, deleteItem);
             cell.textProperty().bind(cell.itemProperty());
@@ -317,10 +325,18 @@ public class Controller {
             MenuItem deleteItem = new MenuItem();
             deleteItem.textProperty().bind(Bindings.format("Delete", cell.itemProperty()));
             deleteItem.setOnAction(event -> {
-                databaseOperations.trashNote(cell.getItem());
-                noteTitles.getSelectionModel().selectFirst();
-                noteTitles.getItems().remove(cell.getItem());
-                fetchNoteTitles();
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("Confirm Deletion");
+                alert.setContentText("This note will trashed" );
+                alert.setHeaderText("Are you sure you want to move '"+cell.getItem()+"' to trash?");
+                Optional<ButtonType> result = alert.showAndWait();
+                if (result.get() == ButtonType.OK){
+                    databaseOperations.trashNote(cell.getItem());
+                    noteTitles.getSelectionModel().selectFirst();
+                    noteTitles.getItems().remove(cell.getItem());
+                    fetchNoteTitles();
+                }
+
             });
             contextMenu.getItems().addAll(viewDetailsItem, deleteItem);
             cell.textProperty().bind(cell.itemProperty());
@@ -646,8 +662,16 @@ public class Controller {
             MenuItem deleteItem = new MenuItem();
             deleteItem.textProperty().bind(Bindings.format("Delete", cell.itemProperty()));
             deleteItem.setOnAction(event -> {
-                databaseOperations.trashTask(cell.getItem());
-                fetchProjectTasks();
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("Confirm Deletion");
+                alert.setContentText("This task will trashed" );
+                alert.setHeaderText("Are you sure you want to move '"+cell.getItem()+"' to trash?");
+                Optional<ButtonType> result = alert.showAndWait();
+                if (result.get() == ButtonType.OK){
+                    databaseOperations.trashTask(cell.getItem());
+                    fetchProjectTasks();
+                }
+
             });
             contextMenu.getItems().addAll(deleteItem);
             cell.textProperty().bind(cell.itemProperty());
@@ -802,8 +826,17 @@ public class Controller {
             MenuItem deleteItem = new MenuItem();
             deleteItem.textProperty().bind(Bindings.format("Delete Permanently", cell.itemProperty()));
             deleteItem.setOnAction(event -> {
-//                    databaseOperations.restoreProject(cell.getItem());
-//                    viewTrashedProjects();
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("Confirm Deletion");
+                alert.setContentText("This operation cannot be Undone" );
+                alert.setHeaderText("Are you sure you want to permanently delete '"+cell.getItem()+"' ?");
+                Optional<ButtonType> result = alert.showAndWait();
+                if (result.get() == ButtonType.OK){
+                    databaseOperations.eraseProject(cell.getItem());
+                    projectsTrashTable(stage);
+                }
+
+
             });
             contextMenu.getItems().addAll(restoreItem, deleteItem);
             cell.textProperty().bind(cell.itemProperty());
@@ -887,8 +920,16 @@ public class Controller {
             MenuItem deleteItem = new MenuItem();
             deleteItem.textProperty().bind(Bindings.format("Delete Permanently", cell.itemProperty()));
             deleteItem.setOnAction(event -> {
-//                    databaseOperations.restoreProject(cell.getItem());
-//                    viewTrashedProjects();
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("Confirm Deletion");
+                alert.setContentText("This operation cannot be Undone" );
+                alert.setHeaderText("Are you sure you want to permanently delete '"+cell.getItem()+"' ?");
+                Optional<ButtonType> result = alert.showAndWait();
+                if (result.get() == ButtonType.OK){
+                    databaseOperations.eraseNote(cell.getItem());
+                    notesTrashTable(stage);
+                }
+
             });
             contextMenu.getItems().addAll(restoreItem, deleteItem);
             cell.textProperty().bind(cell.itemProperty());
@@ -969,8 +1010,15 @@ public class Controller {
             MenuItem deleteItem = new MenuItem();
             deleteItem.textProperty().bind(Bindings.format("Delete Permanently", cell.itemProperty()));
             deleteItem.setOnAction(event -> {
-//                    databaseOperations.restoreProject(cell.getItem());
-//                    viewTrashedProjects();
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("Confirm Deletion");
+                alert.setContentText("This operation cannot be Undone" );
+                alert.setHeaderText("Are you sure you want to permanently delete '"+cell.getItem()+"' ?");
+                Optional<ButtonType> result = alert.showAndWait();
+                if (result.get() == ButtonType.OK){
+                databaseOperations.eraseTask(cell.getItem());
+                trashTasksTable(stage);
+                }
             });
             contextMenu.getItems().addAll(restoreItem, deleteItem);
             cell.textProperty().bind(cell.itemProperty());
