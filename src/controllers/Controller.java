@@ -253,10 +253,10 @@ public class Controller {
             deleteItem.setOnAction(event -> {
                 Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
                 alert.setTitle("Confirm Deletion");
-                alert.setContentText("This project will trashed" );
-                alert.setHeaderText("Are you sure you want to move '"+cell.getItem()+"' to trash?");
+                alert.setContentText("This project will trashed");
+                alert.setHeaderText("Are you sure you want to move '" + cell.getItem() + "' to trash?");
                 Optional<ButtonType> result = alert.showAndWait();
-                if (result.get() == ButtonType.OK){
+                if (result.get() == ButtonType.OK) {
                     databaseOperations.trashProject(cell.getItem());
                     projectTitles.getSelectionModel().selectFirst();
                     projectTitles.getItems().remove(cell.getItem());
@@ -327,10 +327,10 @@ public class Controller {
             deleteItem.setOnAction(event -> {
                 Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
                 alert.setTitle("Confirm Deletion");
-                alert.setContentText("This note will trashed" );
-                alert.setHeaderText("Are you sure you want to move '"+cell.getItem()+"' to trash?");
+                alert.setContentText("This note will trashed");
+                alert.setHeaderText("Are you sure you want to move '" + cell.getItem() + "' to trash?");
                 Optional<ButtonType> result = alert.showAndWait();
-                if (result.get() == ButtonType.OK){
+                if (result.get() == ButtonType.OK) {
                     databaseOperations.trashNote(cell.getItem());
                     noteTitles.getSelectionModel().selectFirst();
                     noteTitles.getItems().remove(cell.getItem());
@@ -664,10 +664,10 @@ public class Controller {
             deleteItem.setOnAction(event -> {
                 Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
                 alert.setTitle("Confirm Deletion");
-                alert.setContentText("This task will trashed" );
-                alert.setHeaderText("Are you sure you want to move '"+cell.getItem()+"' to trash?");
+                alert.setContentText("This task will trashed");
+                alert.setHeaderText("Are you sure you want to move '" + cell.getItem() + "' to trash?");
                 Optional<ButtonType> result = alert.showAndWait();
-                if (result.get() == ButtonType.OK){
+                if (result.get() == ButtonType.OK) {
                     databaseOperations.trashTask(cell.getItem());
                     fetchProjectTasks();
                 }
@@ -783,7 +783,6 @@ public class Controller {
         stage.setResizable(false);
         stage.initModality(Modality.APPLICATION_MODAL);
         stage.showAndWait();
-
     }
 
     private void projectsTrashTable(Stage stage) {
@@ -828,10 +827,10 @@ public class Controller {
             deleteItem.setOnAction(event -> {
                 Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
                 alert.setTitle("Confirm Deletion");
-                alert.setContentText("This operation cannot be Undone" );
-                alert.setHeaderText("Are you sure you want to permanently delete '"+cell.getItem()+"' ?");
+                alert.setContentText("This operation cannot be undone");
+                alert.setHeaderText("Are you sure you want to permanently delete '" + cell.getItem() + "' ?");
                 Optional<ButtonType> result = alert.showAndWait();
-                if (result.get() == ButtonType.OK){
+                if (result.get() == ButtonType.OK) {
                     databaseOperations.eraseProject(cell.getItem());
                     projectsTrashTable(stage);
                 }
@@ -855,8 +854,25 @@ public class Controller {
         projectsTrash.setPrefSize(750, 500);
         VBox root = new VBox();
         root.setPadding(new Insets(10, 10, 10, 10));
-
-        root.getChildren().addAll(projectsTrash);
+        ButtonBar buttonBar = new ButtonBar();
+        Button emptyTrash = new Button("Empty Trash");
+        buttonBar.setPadding(new Insets(10, 10, 10, 10));
+        emptyTrash.setOnAction(e -> {
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("Confirm Deletion");
+            alert.setContentText("This operation cannot be undone");
+            alert.setHeaderText("Are you sure you want to empty trash' ?");
+            Optional<ButtonType> result = alert.showAndWait();
+            if (result.get() == ButtonType.OK) {
+                databaseOperations.emptyProjectTrash();
+                projectsTrashTable(stage);
+            }
+        });
+        if (arrayLists.isEmpty()) {
+            emptyTrash.setDisable(true);
+        }
+        buttonBar.getButtons().add(emptyTrash);
+        root.getChildren().addAll(projectsTrash, buttonBar);
         stage.setScene(new Scene(root, 772, 521));
 
 
@@ -922,10 +938,10 @@ public class Controller {
             deleteItem.setOnAction(event -> {
                 Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
                 alert.setTitle("Confirm Deletion");
-                alert.setContentText("This operation cannot be Undone" );
-                alert.setHeaderText("Are you sure you want to permanently delete '"+cell.getItem()+"' ?");
+                alert.setContentText("This operation cannot be undone");
+                alert.setHeaderText("Are you sure you want to permanently delete '" + cell.getItem() + "' ?");
                 Optional<ButtonType> result = alert.showAndWait();
-                if (result.get() == ButtonType.OK){
+                if (result.get() == ButtonType.OK) {
                     databaseOperations.eraseNote(cell.getItem());
                     notesTrashTable(stage);
                 }
@@ -948,7 +964,25 @@ public class Controller {
         VBox root = new VBox();
         root.setPadding(new Insets(10, 10, 10, 10));
         notesTrash.setPrefSize(750, 500);
-        root.getChildren().addAll(notesTrash);
+        ButtonBar buttonBar = new ButtonBar();
+        Button emptyTrash = new Button("Empty Trash");
+        buttonBar.setPadding(new Insets(10, 10, 10, 10));
+        emptyTrash.setOnAction(e -> {
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("Confirm Deletion");
+            alert.setContentText("This operation cannot be undone");
+            alert.setHeaderText("Are you sure you want to empty trash' ?");
+            Optional<ButtonType> result = alert.showAndWait();
+            if (result.get() == ButtonType.OK) {
+                databaseOperations.emptyNotesTrash();
+                notesTrashTable(stage);
+            }
+        });
+        if (arrayLists.isEmpty()) {
+            emptyTrash.setDisable(true);
+        }
+        buttonBar.getButtons().add(emptyTrash);
+        root.getChildren().addAll(notesTrash, buttonBar);
         stage.setScene(new Scene(root, 772, 521));
     }
 
@@ -1012,12 +1046,12 @@ public class Controller {
             deleteItem.setOnAction(event -> {
                 Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
                 alert.setTitle("Confirm Deletion");
-                alert.setContentText("This operation cannot be Undone" );
-                alert.setHeaderText("Are you sure you want to permanently delete '"+cell.getItem()+"' ?");
+                alert.setContentText("This operation cannot be undone");
+                alert.setHeaderText("Are you sure you want to permanently delete '" + cell.getItem() + "' ?");
                 Optional<ButtonType> result = alert.showAndWait();
-                if (result.get() == ButtonType.OK){
-                databaseOperations.eraseTask(cell.getItem());
-                trashTasksTable(stage);
+                if (result.get() == ButtonType.OK) {
+                    databaseOperations.eraseTask(cell.getItem());
+                    trashTasksTable(stage);
                 }
             });
             contextMenu.getItems().addAll(restoreItem, deleteItem);
@@ -1035,8 +1069,26 @@ public class Controller {
         tasksTrash.getColumns().addAll(trashTaskCount, trashTaskName, trashTaskProjectName, trashTaskDeleteDate);
         VBox root = new VBox();
         root.setPadding(new Insets(10, 10, 10, 10));
+        ButtonBar buttonBar = new ButtonBar();
+        Button emptyTrash = new Button("Empty Trash");
+        buttonBar.setPadding(new Insets(10, 10, 10, 10));
+        emptyTrash.setOnAction(e -> {
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("Confirm Deletion");
+            alert.setContentText("This operation cannot be undone");
+            alert.setHeaderText("Are you sure you want to empty trash' ?");
+            Optional<ButtonType> result = alert.showAndWait();
+            if (result.get() == ButtonType.OK) {
+                databaseOperations.emptyTasksTrash();
+                trashTasksTable(stage);
+            }
+        });
+        if (arrayLists.isEmpty()) {
+            emptyTrash.setDisable(true);
+        }
+        buttonBar.getButtons().add(emptyTrash);
         tasksTrash.setPrefSize(750, 500);
-        root.getChildren().addAll(tasksTrash);
+        root.getChildren().addAll(tasksTrash, buttonBar);
         stage.setScene(new Scene(root, 772, 521));
     }
 
