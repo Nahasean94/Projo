@@ -802,8 +802,9 @@ public class Controller {
             MenuItem deleteItem = new MenuItem();
             deleteItem.textProperty().bind(Bindings.format("Delete Permanently", cell.itemProperty()));
             deleteItem.setOnAction(event -> {
-//                    databaseOperations.restoreProject(cell.getItem());
-//                    viewTrashedProjects();
+                databaseOperations.eraseProject(cell.getItem());
+                projectsTrashTable(stage);
+
             });
             contextMenu.getItems().addAll(restoreItem, deleteItem);
             cell.textProperty().bind(cell.itemProperty());
@@ -887,8 +888,8 @@ public class Controller {
             MenuItem deleteItem = new MenuItem();
             deleteItem.textProperty().bind(Bindings.format("Delete Permanently", cell.itemProperty()));
             deleteItem.setOnAction(event -> {
-//                    databaseOperations.restoreProject(cell.getItem());
-//                    viewTrashedProjects();
+                databaseOperations.eraseNote(cell.getItem());
+                notesTrashTable(stage);
             });
             contextMenu.getItems().addAll(restoreItem, deleteItem);
             cell.textProperty().bind(cell.itemProperty());
@@ -969,8 +970,8 @@ public class Controller {
             MenuItem deleteItem = new MenuItem();
             deleteItem.textProperty().bind(Bindings.format("Delete Permanently", cell.itemProperty()));
             deleteItem.setOnAction(event -> {
-//                    databaseOperations.restoreProject(cell.getItem());
-//                    viewTrashedProjects();
+                databaseOperations.eraseTask(cell.getItem());
+                trashTasksTable(stage);
             });
             contextMenu.getItems().addAll(restoreItem, deleteItem);
             cell.textProperty().bind(cell.itemProperty());
