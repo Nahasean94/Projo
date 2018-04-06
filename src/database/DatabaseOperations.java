@@ -732,5 +732,73 @@ public class DatabaseOperations {
         query5(oldName, newName, sql);
     }
 
+    public ArrayList<ArrayList> fetchTrashedProjects() {
+        String sql = "SELECT * FROM TRASH_PROJECTS";
+        ArrayList arrayList = new ArrayList();
+        try (Connection connection = this.connect();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            ResultSet resultSet = preparedStatement.executeQuery();
+            int count = 1;
+            while (resultSet.next()) {
+                ArrayList arrayList1 = new ArrayList();
+                arrayList1.add(count++);
+                arrayList1.add(resultSet.getString("PROJECT_NAME"));
+                arrayList1.add(resultSet.getString("DATE_DELETED"));
+                arrayList.add(arrayList1);
+            }
+        } catch (SQLException e) {
+            e.getMessage();
+        }
+        return arrayList;
+    }
 
+    public ArrayList<ArrayList> fetchTrashedNotes() {
+        String sql = "SELECT * FROM TRASH_NOTES";
+        ArrayList arrayList = new ArrayList();
+        try (Connection connection = this.connect();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            ResultSet resultSet = preparedStatement.executeQuery();
+            int count = 1;
+            while (resultSet.next()) {
+                ArrayList arrayList1 = new ArrayList();
+                arrayList1.add(count++);
+                arrayList1.add(resultSet.getString("NOTE_TITLE"));
+                arrayList1.add(resultSet.getString("DATE_DELETED"));
+                arrayList.add(arrayList1);
+            }
+        } catch (SQLException e) {
+            e.getMessage();
+        }
+        return arrayList;
+    }
+
+    public ArrayList<ArrayList> fetchTrashedTasks() {
+        String sql = "SELECT * FROM TRASH_TASKS";
+        ArrayList arrayList = new ArrayList();
+        try (Connection connection = this.connect();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            ResultSet resultSet = preparedStatement.executeQuery();
+            int count = 1;
+            while (resultSet.next()) {
+                ArrayList arrayList1 = new ArrayList();
+                arrayList1.add(count++);
+                int id = resultSet.getInt("PROJECT_ID");
+                arrayList1.add(resultSet.getString("TASK_NAME"));
+                arrayList1.add(resultSet.getString("DATE_DELETED"));
+                String getProjectName = "SELECT NAME FROM PROJECTS WHERE ID=?";
+                try (Connection connection1 = this.connect();
+                     PreparedStatement preparedStatement1 = connection1.prepareStatement(getProjectName)) {
+                    preparedStatement1.setInt(1, id);
+                    ResultSet resultSet1 = preparedStatement1.executeQuery();
+                    while (resultSet1.next()) {
+                        arrayList1.add(resultSet1.getString("NAME"));
+                    }
+                }
+                arrayList.add(arrayList1);
+            }
+        } catch (SQLException e) {
+            e.getMessage();
+        }
+        return arrayList;
+    }
 }

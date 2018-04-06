@@ -27,10 +27,7 @@ import javafx.scene.control.cell.TextFieldListCell;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.scene.web.HTMLEditor;
@@ -73,6 +70,7 @@ public class Controller {
     private TextField newTaskTextField, searchTitles;
     @FXML
     private TableColumn<Task, String> taskName, taskCount, taskDate, taskComplete, taskPriority;
+
     @FXML
     private TableView tasksTable;
     @FXML
@@ -328,7 +326,7 @@ public class Controller {
                 databaseOperations.trashNote(cell.getItem());
                 noteTitles.getSelectionModel().selectFirst();
                 noteTitles.getItems().remove(cell.getItem());
-               fetchNoteTitles();
+                fetchNoteTitles();
             });
             contextMenu.getItems().addAll(viewDetailsItem, deleteItem);
             cell.textProperty().bind(cell.itemProperty());
@@ -579,7 +577,7 @@ public class Controller {
 
     //fetch Project Tasks
     private void fetchProjectTasks() {
-        ArrayList<ArrayList> arrayLists = (databaseOperations.fetchTasks(itemId));
+        ArrayList<ArrayList> arrayLists = databaseOperations.fetchTasks(itemId);
         int completeTasks = 0;
         int incompleteTasks = 0;
         try {
@@ -647,7 +645,7 @@ public class Controller {
             e.printStackTrace();
         }
         taskName.setCellFactory(lv -> {
-            TableCell<Task,String> cell = new TableCell<>();
+            TableCell<Task, String> cell = new TableCell<>();
             ContextMenu contextMenu = new ContextMenu();
 
             MenuItem deleteItem = new MenuItem();
@@ -760,32 +758,136 @@ public class Controller {
     }
 
     public void viewTrashedProjects() {
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/fxml/trash_projects.fxml"));
-        trash(fxmlLoader);
+//        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/fxml/trash_projects.fxml"));
+//        trash(fxmlLoader);
+        ArrayList<ArrayList> arrayLists = databaseOperations.fetchTrashedProjects();
+        TableView projectsTrash=new TableView();
+        TableColumn<TrashedProjects,String> trashProjectCount=new TableColumn<>("#");
+        trashProjectCount.setPrefWidth(50);
+        TableColumn<TrashedProjects,String> trashProjectName=new TableColumn<>("Name");
+        trashProjectName.setPrefWidth(600);
+        TableColumn<TrashedProjects,String> trashProjectDeleteDate=new TableColumn<>("Date Deleted");
+        trashProjectDeleteDate.setPrefWidth(100);
+        try {
+            ObservableList<TrashedProjects> data = FXCollections.observableArrayList();
+//iterate through each element of the arraylist
+            for (int i = 0;i<arrayLists.size() ; i++) {
+                SimpleIntegerProperty id =new SimpleIntegerProperty((Integer)arrayLists.get(i).get(0));
+                SimpleStringProperty name = new SimpleStringProperty(arrayLists.get(i).get(1).toString());
+                SimpleStringProperty date = new SimpleStringProperty(formatTime(arrayLists.get(i).get(2).toString()));
+                data.add(new TrashedProjects(name,id,date));
+//obtain the value of each column
+                trashProjectCount.setCellValueFactory(new PropertyValueFactory<>("projectId"));
+                trashProjectName.setCellValueFactory(new PropertyValueFactory<>("projectName"));
+                trashProjectDeleteDate.setCellValueFactory(new PropertyValueFactory<>("dateDeleted"));
+            }
+            projectsTrash.setItems(data);
+            projectsTrash.getColumns().addAll(trashProjectCount,trashProjectName,trashProjectDeleteDate);
+            VBox root = new VBox();
+            root.setPadding(new Insets(10, 10, 10, 10));
+            projectsTrash.setPrefSize(750,500);
+
+            root.getChildren().addAll(projectsTrash);
+            Stage stage = new Stage();
+            stage.setTitle("Projects Trash");
+            stage.setResizable(false);
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.setScene(new Scene(root,772,521));
+            stage.showAndWait();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
     }
 
     public void viewTrashedNotes() {
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/fxml/trash_notes.fxml"));
-        trash(fxmlLoader);
-    }
-
-    public void viewTrashedTasks() {
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/fxml/trash_tasks.fxml"));
-        trash(fxmlLoader);
-    }
-
-    private void trash(FXMLLoader fxmlLoader) {
+        ArrayList<ArrayList> arrayLists = databaseOperations.fetchTrashedNotes();
+        TableView notesTrash=new TableView();
+        TableColumn<TrashedProjects,String> trashNoteCount=new TableColumn<>("#");
+        trashNoteCount.setPrefWidth(50);
+        TableColumn<TrashedProjects,String> trashNoteName=new TableColumn<>("Name");
+        trashNoteName.setPrefWidth(600);
+        TableColumn<TrashedProjects,String> trashNoteDeleteDate=new TableColumn<>("Date Deleted");
+        trashNoteDeleteDate.setPrefWidth(100);
         try {
-            Parent root = fxmlLoader.load();
+            ObservableList<TrashedNotes> data = FXCollections.observableArrayList();
+//iterate through each element of the arraylist
+            for (int i = 0;i<arrayLists.size() ; i++) {
+                SimpleIntegerProperty id =new SimpleIntegerProperty((Integer)arrayLists.get(i).get(0));
+                SimpleStringProperty name = new SimpleStringProperty(arrayLists.get(i).get(1).toString());
+                SimpleStringProperty date = new SimpleStringProperty(formatTime(arrayLists.get(i).get(2).toString()));
+                data.add(new TrashedNotes(name,id,date));
+//obtain the value of each column
+                trashNoteCount.setCellValueFactory(new PropertyValueFactory<>("noteId"));
+                trashNoteName.setCellValueFactory(new PropertyValueFactory<>("noteName"));
+                trashNoteDeleteDate.setCellValueFactory(new PropertyValueFactory<>("dateDeleted"));
+            }
+            notesTrash.setItems(data);
+            notesTrash.getColumns().addAll(trashNoteCount,trashNoteName,trashNoteDeleteDate);
+            VBox root = new VBox();
+            root.setPadding(new Insets(10, 10, 10, 10));
+            notesTrash.setPrefSize(750,500);
+
+            root.getChildren().addAll(notesTrash);
             Stage stage = new Stage();
-            stage.setTitle("Projects Trash");
+            stage.setTitle("Notes Trash");
+            stage.setResizable(false);
             stage.initModality(Modality.APPLICATION_MODAL);
-            stage.setScene(new Scene(root));
-            stage.show();
-        } catch (IOException e) {
+            stage.setScene(new Scene(root,772,521));
+            stage.showAndWait();
+
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
+    public void viewTrashedTasks() {
+        ArrayList<ArrayList> arrayLists = databaseOperations.fetchTrashedTasks();
+        TableView notesTrash=new TableView();
+        TableColumn<TrashedProjects,String> trashTaskCount=new TableColumn<>("#");
+        trashTaskCount.setPrefWidth(50);
+        TableColumn<TrashedProjects,String> trashTaskName=new TableColumn<>("Name");
+        trashTaskName.setPrefWidth(400);
+        TableColumn<TrashedProjects,String> trashTaskProjectName=new TableColumn<>("Project");
+        trashTaskProjectName.setPrefWidth(200);
+        TableColumn<TrashedProjects,String> trashTaskDeleteDate=new TableColumn<>("Date Deleted");
+        trashTaskDeleteDate.setPrefWidth(100);
+        try {
+            ObservableList<TrashedTasks> data = FXCollections.observableArrayList();
+//iterate through each element of the arraylist
+            for (int i = 0;i<arrayLists.size() ; i++) {
+                SimpleIntegerProperty id =new SimpleIntegerProperty((Integer)arrayLists.get(i).get(0));
+                SimpleStringProperty name = new SimpleStringProperty(arrayLists.get(i).get(1).toString());
+                SimpleStringProperty projectName = new SimpleStringProperty(arrayLists.get(i).get(3).toString());
+                SimpleStringProperty date = new SimpleStringProperty(formatTime(arrayLists.get(i).get(2).toString()));
+                data.add(new TrashedTasks(name,id,date,projectName));
+//obtain the value of each column
+                trashTaskCount.setCellValueFactory(new PropertyValueFactory<>("taskId"));
+                trashTaskName.setCellValueFactory(new PropertyValueFactory<>("taskName"));
+                trashTaskProjectName.setCellValueFactory(new PropertyValueFactory<>("projectName"));
+                trashTaskDeleteDate.setCellValueFactory(new PropertyValueFactory<>("dateDeleted"));
+            }
+            notesTrash.setItems(data);
+            notesTrash.getColumns().addAll(trashTaskCount,trashTaskName,trashTaskProjectName,trashTaskDeleteDate);
+            VBox root = new VBox();
+            root.setPadding(new Insets(10, 10, 10, 10));
+            notesTrash.setPrefSize(750,500);
+
+            root.getChildren().addAll(notesTrash);
+            Stage stage = new Stage();
+            stage.setTitle("Tasks Trash");
+            stage.setResizable(false);
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.setScene(new Scene(root,772,521));
+            stage.showAndWait();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+
 
     public static class Task {
         private SimpleStringProperty taskName;
@@ -863,6 +965,159 @@ public class Controller {
         }
 
 
+    }
+
+    public static class TrashedProjects {
+        private SimpleStringProperty projectName;
+        private SimpleStringProperty dateDeleted;
+        private SimpleIntegerProperty projectId;
+
+        private TrashedProjects(SimpleStringProperty projectName, SimpleIntegerProperty projectId, SimpleStringProperty dateDeleted) {
+            this.projectName = projectName;
+            this.dateDeleted = dateDeleted;
+            this.projectId = projectId;
+        }
+
+        public String getProjectName() {
+            return projectName.get();
+        }
+
+        public SimpleStringProperty projectNameProperty() {
+            return projectName;
+        }
+
+        public void setProjectName(String projectName) {
+            this.projectName.set(projectName);
+        }
+        public int getProjectId() {
+            return projectId.get();
+        }
+
+        public SimpleIntegerProperty projectIdProperty() {
+            return projectId;
+        }
+
+        public void setProjectId(int projectId) {
+            this.projectId.set(projectId);
+        }
+
+        public String getDateDeleted() {
+            return dateDeleted.get();
+        }
+
+        public SimpleStringProperty dateDeletedProperty() {
+            return dateDeleted;
+        }
+
+        public void setDateDeleted(String dateDeleted) {
+            this.dateDeleted.set(dateDeleted);
+        }
+    }
+
+    public static class TrashedNotes {
+        private SimpleStringProperty noteName;
+        private SimpleStringProperty dateDeleted;
+        private SimpleIntegerProperty noteId;
+        public TrashedNotes(SimpleStringProperty noteName, SimpleIntegerProperty noteId, SimpleStringProperty dateDeleted) {
+            this.noteName = noteName;
+            this.dateDeleted = dateDeleted;
+            this.noteId = noteId;
+
+        }
+
+        public String getNoteName() {
+            return noteName.get();
+        }
+
+        public SimpleStringProperty noteNameProperty() {
+            return noteName;
+        }
+
+        public void setNoteName(String noteName) {
+            this.noteName.set(noteName);
+        }
+        public int getNoteId() {
+            return noteId.get();
+        }
+
+        public SimpleIntegerProperty noteIdProperty() {
+            return noteId;
+        }
+
+        public void setNoteId(int noteId) {
+            this.noteId.set(noteId);
+        }
+        public String getDateDeleted() {
+            return dateDeleted.get();
+        }
+
+        public SimpleStringProperty dateDeletedProperty() {
+            return dateDeleted;
+        }
+
+        public void setDateDeleted(String dateDeleted) {
+            this.dateDeleted.set(dateDeleted);
+        }
+    }
+
+    public static class TrashedTasks {
+        private SimpleStringProperty taskName;
+        private SimpleStringProperty dateDeleted;
+        private SimpleStringProperty projectName;
+        private SimpleIntegerProperty taskId;
+        public TrashedTasks(SimpleStringProperty taskName, SimpleIntegerProperty taskId, SimpleStringProperty dateDeleted, SimpleStringProperty projectName) {
+            this.taskName = taskName;
+            this.dateDeleted = dateDeleted;
+            this.projectName = projectName;
+            this.taskId = taskId;
+
+        }
+
+        public String getTaskName() {
+            return taskName.get();
+        }
+
+        public SimpleStringProperty taskNameProperty() {
+            return taskName;
+        }
+
+        public void setTaskName(String taskName) {
+            this.taskName.set(taskName);
+        }
+
+        public String getProjectName() {
+            return projectName.get();
+        }
+
+        public SimpleStringProperty projectNameProperty() {
+            return projectName;
+        }
+
+        public void setProjectName(String projectName) {
+            this.projectName.set(projectName);
+        }
+        public int getTaskId() {
+            return taskId.get();
+        }
+
+        public SimpleIntegerProperty taskIdProperty() {
+            return taskId;
+        }
+
+        public void setTaskId(int taskId) {
+            this.taskId.set(taskId);
+        }
+        public String getDateDeleted() {
+            return dateDeleted.get();
+        }
+
+        public SimpleStringProperty dateDeletedProperty() {
+            return dateDeleted;
+        }
+
+        public void setDateDeleted(String dateDeleted) {
+            this.dateDeleted.set(dateDeleted);
+        }
     }
 
 }
