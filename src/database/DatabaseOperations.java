@@ -275,9 +275,9 @@ public class DatabaseOperations {
     /**
      * Empty trash
      *
-     * @param id
+     *
      */
-    public void emptyProjectTrash(int id) {
+    public void emptyProjectTrash() {
         String sql = "DELETE FROM TRASH_PROJECTS";
         try (Connection conn = this.connect();
              PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
@@ -352,7 +352,7 @@ public class DatabaseOperations {
     /**
      * Restore a trashed  project
      *
-     * @param naem
+     * @param name
      */
     public void restoreProject(String name) {
         String sql = "UPDATE PROJECTS SET TRASH=? WHERE NAME=?";
@@ -677,6 +677,18 @@ public class DatabaseOperations {
      */
     public void emptyNotesTrash() {
         String sql = "DELETE FROM TRASH_NOTES";
+        try (Connection conn = this.connect();
+             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            preparedStatement.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+    /**
+     * Empty tasks trash
+     */
+    public void emptyTasksTrash() {
+        String sql = "DELETE FROM TRASH_TASKS";
         try (Connection conn = this.connect();
              PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
             preparedStatement.executeUpdate();
