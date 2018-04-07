@@ -275,7 +275,7 @@ public class DatabaseOperations {
     /**
      * Empty trash
      *
-     * @param id
+     *
      */
     public void emptyProjectTrash() {
         String sql = "DELETE FROM TRASH_PROJECTS";
@@ -352,7 +352,7 @@ public class DatabaseOperations {
     /**
      * Restore a trashed  project
      *
-     * @param naem
+     * @param name
      */
     public void restoreProject(String name) {
         String sql = "UPDATE PROJECTS SET TRASH=? WHERE NAME=?";

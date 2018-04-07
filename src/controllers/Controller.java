@@ -227,12 +227,14 @@ public class Controller {
                     }
                 });
                 projectTitles.setItems(observableList);
+                projectTitles.getSelectionModel().clearSelection();
                 projectTitles.getSelectionModel().selectFirst();
                 onProjectClicked();
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
+        projectTitles.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         projectTitles.setOnKeyPressed(keyEvent -> {
             if (keyEvent.getCode() == KeyCode.ENTER) {
                 projectTitles.setEditable(false);
@@ -253,13 +255,25 @@ public class Controller {
             deleteItem.setOnAction(event -> {
                 Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
                 alert.setTitle("Confirm Deletion");
+                if (projectTitles.getSelectionModel().getSelectedItems().size() > 1) {
+                    alert.setHeaderText("Are you sure you want to move " + projectTitles.getSelectionModel().getSelectedItems().size() + " projects to trash?");
+                } else {
+                    alert.setHeaderText("Are you sure you want to move '" + cell.getItem() + "' to trash?");
+                }
                 alert.setContentText("This project will trashed");
-                alert.setHeaderText("Are you sure you want to move '" + cell.getItem() + "' to trash?");
                 Optional<ButtonType> result = alert.showAndWait();
                 if (result.get() == ButtonType.OK) {
-                    databaseOperations.trashProject(cell.getItem());
+                    if (projectTitles.getSelectionModel().getSelectedItems().size() > 1) {
+                        System.out.println(projectTitles.getSelectionModel().getSelectedItems());
+                        ObservableList items = projectTitles.getSelectionModel().getSelectedItems();
+                        for (Object item : items) {
+                            databaseOperations.trashProject(item.toString());
+                        }
+                    } else {
+
+                        databaseOperations.trashProject(cell.getItem());
+                    }
                     projectTitles.getSelectionModel().selectFirst();
-                    projectTitles.getItems().remove(cell.getItem());
                     fetchProjectTitles();
                 }
 
@@ -305,11 +319,13 @@ public class Controller {
                 }
             });
             noteTitles.setItems(observableList);
+            noteTitles.getSelectionModel().clearSelection();
             noteTitles.getSelectionModel().selectFirst();
             onNoteClicked();
         } catch (Exception e) {
             e.printStackTrace();
         }
+        noteTitles.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         noteTitles.setCellFactory(lv -> {
 
             ListCell<String> cell = new ListCell<>();
@@ -327,13 +343,23 @@ public class Controller {
             deleteItem.setOnAction(event -> {
                 Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
                 alert.setTitle("Confirm Deletion");
+                if (noteTitles.getSelectionModel().getSelectedItems().size() > 1) {
+                    alert.setHeaderText("Are you sure you want to move " + noteTitles.getSelectionModel().getSelectedItems().size() + " notes to trash?");
+                } else {
+                    alert.setHeaderText("Are you sure you want to move '" + cell.getItem() + "' to trash?");
+                }
                 alert.setContentText("This note will trashed");
-                alert.setHeaderText("Are you sure you want to move '" + cell.getItem() + "' to trash?");
                 Optional<ButtonType> result = alert.showAndWait();
                 if (result.get() == ButtonType.OK) {
-                    databaseOperations.trashNote(cell.getItem());
+                    if (noteTitles.getSelectionModel().getSelectedItems().size() > 1) {
+                        ObservableList items = noteTitles.getSelectionModel().getSelectedItems();
+                        for (Object item : items) {
+                            databaseOperations.trashNote(item.toString());
+                        }
+                    } else {
+                        databaseOperations.trashNote(cell.getItem());
+                    }
                     noteTitles.getSelectionModel().selectFirst();
-                    noteTitles.getItems().remove(cell.getItem());
                     fetchNoteTitles();
                 }
 
@@ -649,6 +675,7 @@ public class Controller {
                 taskComplete.setCellValueFactory(new PropertyValueFactory<>("complete"));
                 taskPriority.setCellValueFactory(new PropertyValueFactory<>("taskPriority"));
             }
+            tasksTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
             tasksTable.getItems().setAll(data);
             tasksPane.setText("Tasks (" + arrayLists.size() + ")              Complete (" + completeTasks + "), Incomplete (" + incompleteTasks + ")");
             calculateCompletion(completeTasks, incompleteTasks);
@@ -665,10 +692,22 @@ public class Controller {
                 Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
                 alert.setTitle("Confirm Deletion");
                 alert.setContentText("This task will trashed");
-                alert.setHeaderText("Are you sure you want to move '" + cell.getItem() + "' to trash?");
+                if (tasksTable.getSelectionModel().getSelectedItems().size() > 1) {
+                    alert.setHeaderText("Are you sure you want to move " + tasksTable.getSelectionModel().getSelectedItems().size() + " tasks to trash?");
+                } else {
+                    alert.setHeaderText("Are you sure you want to move '" + cell.getItem() + "' to trash?");
+                }
                 Optional<ButtonType> result = alert.showAndWait();
                 if (result.get() == ButtonType.OK) {
-                    databaseOperations.trashTask(cell.getItem());
+                    if (tasksTable.getSelectionModel().getSelectedItems().size() > 1) {
+                        ObservableList items = tasksTable.getSelectionModel().getSelectedItems();
+                        for (Object item : items) {
+                            Task selectedTask = (Task) item;
+                            databaseOperations.trashTask(selectedTask.getTaskName());
+                        }
+                    } else {
+                        databaseOperations.trashTask(cell.getItem());
+                    }
                     fetchProjectTasks();
                 }
 
@@ -810,6 +849,8 @@ public class Controller {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        projectsTrash.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
         trashProjectName.setCellFactory(lv -> {
             TableCell<TrashedProjects, String> cell = new TableCell<>();
             ContextMenu contextMenu = new ContextMenu();
@@ -817,7 +858,15 @@ public class Controller {
             MenuItem restoreItem = new MenuItem();
             restoreItem.textProperty().bind(Bindings.format("Restore", cell.itemProperty()));
             restoreItem.setOnAction(event -> {
-                databaseOperations.restoreProject(cell.getItem());
+                if (projectsTrash.getSelectionModel().getSelectedItems().size() > 1) {
+                    ObservableList items = projectsTrash.getSelectionModel().getSelectedItems();
+                    for (Object item : items) {
+                        TrashedProjects selectedProject = (TrashedProjects) item;
+                        databaseOperations.restoreProject(selectedProject.getProjectName());
+                    }
+                } else {
+                    databaseOperations.restoreProject(cell.getItem());
+                }
                 projectsTrashTable(stage);
                 tabPane.getSelectionModel().selectFirst();
                 fetchProjectTitles();
@@ -828,10 +877,22 @@ public class Controller {
                 Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
                 alert.setTitle("Confirm Deletion");
                 alert.setContentText("This operation cannot be undone");
-                alert.setHeaderText("Are you sure you want to permanently delete '" + cell.getItem() + "' ?");
+                if (projectsTrash.getSelectionModel().getSelectedItems().size() > 1) {
+                    alert.setHeaderText("Are you sure you want to permanently delete " + projectsTrash.getSelectionModel().getSelectedItems().size() + " projects");
+                } else {
+                    alert.setHeaderText("Are you sure you want to permanently delete '" + cell.getItem() + "'?");
+                }
                 Optional<ButtonType> result = alert.showAndWait();
                 if (result.get() == ButtonType.OK) {
-                    databaseOperations.eraseProject(cell.getItem());
+                    if (projectsTrash.getSelectionModel().getSelectedItems().size() > 1) {
+                        ObservableList items = projectsTrash.getSelectionModel().getSelectedItems();
+                        for (Object item : items) {
+                            TrashedProjects selectedProject = (TrashedProjects) item;
+                            databaseOperations.eraseProject(selectedProject.getProjectName());
+                        }
+                    } else {
+                        databaseOperations.eraseProject(cell.getItem());
+                    }
                     projectsTrashTable(stage);
                 }
 
@@ -916,6 +977,7 @@ public class Controller {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        notesTrash.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         trashNoteName.setCellFactory(lv -> {
             TableCell<TrashedNotes, String> cell = new TableCell<>();
             ContextMenu contextMenu = new ContextMenu();
@@ -923,13 +985,22 @@ public class Controller {
             MenuItem restoreItem = new MenuItem();
             restoreItem.textProperty().bind(Bindings.format("Restore", cell.itemProperty()));
             restoreItem.setOnAction(event -> {
-                databaseOperations.restoreNote(cell.getItem());
+                if (notesTrash.getSelectionModel().getSelectedItems().size() > 1) {
+                    ObservableList items = notesTrash.getSelectionModel().getSelectedItems();
+                    for (Object item : items) {
+                        TrashedNotes selectedNote = (TrashedNotes) item;
+                        databaseOperations.restoreNote(selectedNote.getNoteName());
+                    }
+                } else {
+                    databaseOperations.restoreNote(cell.getItem());
+                }
+
                 tabPane.getSelectionModel().selectLast();
                 notesTrashTable(stage);
                 fetchNoteTitles();
                 if (notesTrash.getSelectionModel().getSelectedItem() != null) {
-                    TrashedNotes selectedTask = (TrashedNotes) notesTrash.getSelectionModel().getSelectedItem();
-                    noteTitles.getSelectionModel().select(selectedTask.getNoteName());
+                    TrashedNotes selectedNote = (TrashedNotes) notesTrash.getSelectionModel().getSelectedItem();
+                    noteTitles.getSelectionModel().select(selectedNote.getNoteName());
                     onNoteClicked();
                 }
             });
@@ -939,10 +1010,23 @@ public class Controller {
                 Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
                 alert.setTitle("Confirm Deletion");
                 alert.setContentText("This operation cannot be undone");
-                alert.setHeaderText("Are you sure you want to permanently delete '" + cell.getItem() + "' ?");
+                if (notesTrash.getSelectionModel().getSelectedItems().size() > 1) {
+                    alert.setHeaderText("Are you sure you want to permanently delete " + notesTrash.getSelectionModel().getSelectedItems().size() + " notes");
+                } else {
+                    alert.setHeaderText("Are you sure you want to permanently delete '" + cell.getItem() + "'?");
+                }
                 Optional<ButtonType> result = alert.showAndWait();
                 if (result.get() == ButtonType.OK) {
-                    databaseOperations.eraseNote(cell.getItem());
+                    if (notesTrash.getSelectionModel().getSelectedItems().size() > 1) {
+                        ObservableList items = notesTrash.getSelectionModel().getSelectedItems();
+                        for (Object item : items) {
+                            TrashedNotes selectedNote = (TrashedNotes) item;
+                            databaseOperations.eraseNote(selectedNote.getNoteName());
+                        }
+                    } else {
+                        databaseOperations.eraseNote(cell.getItem());
+                    }
+
                     notesTrashTable(stage);
                 }
 
@@ -1024,6 +1108,7 @@ public class Controller {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        tasksTrash.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         trashTaskName.setCellFactory(lv -> {
             TableCell<TrashedTasks, String> cell = new TableCell<>();
             ContextMenu contextMenu = new ContextMenu();
@@ -1031,7 +1116,16 @@ public class Controller {
             MenuItem restoreItem = new MenuItem();
             restoreItem.textProperty().bind(Bindings.format("Restore", cell.itemProperty()));
             restoreItem.setOnAction(event -> {
-                databaseOperations.restoreTask(cell.getItem());
+                if (tasksTrash.getSelectionModel().getSelectedItems().size() > 1) {
+                    ObservableList items = tasksTrash.getSelectionModel().getSelectedItems();
+                    for (Object item : items) {
+                        TrashedTasks selectedTask = (TrashedTasks) item;
+                        databaseOperations.restoreTask(selectedTask.getTaskName());
+                    }
+                } else {
+                    databaseOperations.restoreTask(cell.getItem());
+                }
+
                 tabPane.getSelectionModel().selectFirst();
                 trashTasksTable(stage);
                 fetchProjectTitles();
@@ -1047,10 +1141,22 @@ public class Controller {
                 Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
                 alert.setTitle("Confirm Deletion");
                 alert.setContentText("This operation cannot be undone");
-                alert.setHeaderText("Are you sure you want to permanently delete '" + cell.getItem() + "' ?");
+                if (tasksTrash.getSelectionModel().getSelectedItems().size() > 1) {
+                    alert.setHeaderText("Are you sure you want to permanently delete " + tasksTrash.getSelectionModel().getSelectedItems().size() + " tasks");
+                } else {
+                    alert.setHeaderText("Are you sure you want to permanently delete '" + cell.getItem() + "'?");
+                }
                 Optional<ButtonType> result = alert.showAndWait();
                 if (result.get() == ButtonType.OK) {
-                    databaseOperations.eraseTask(cell.getItem());
+                    if (tasksTrash.getSelectionModel().getSelectedItems().size() > 1) {
+                        ObservableList items = tasksTrash.getSelectionModel().getSelectedItems();
+                        for (Object item : items) {
+                            TrashedTasks selectedTask = (TrashedTasks) item;
+                            databaseOperations.eraseTask(selectedTask.getTaskName());
+                        }
+                    } else {
+                        databaseOperations.eraseTask(cell.getItem());
+                    }
                     trashTasksTable(stage);
                 }
             });
