@@ -15,6 +15,7 @@ import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
+import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -39,6 +40,7 @@ import javafx.scene.text.TextFlow;
 import javafx.scene.web.HTMLEditor;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import javafx.util.Pair;
 
 import java.awt.*;
@@ -93,6 +95,7 @@ public class Controller {
     private String projectDescriptionText = "";
     private ArrayList projectsArrayList;
     private ArrayList notesArrayList;
+    private Tooltip tooltip=new Tooltip("A task with such name already exists ");
 
     private String itemName = "";
     private int itemId = 0;
@@ -135,7 +138,7 @@ public class Controller {
         });
         //projects trash
         mainAnchor.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
-            if (new KeyCodeCombination(KeyCode.P, KeyCombination.SHIFT_DOWN, KeyCombination.CONTROL_DOWN).match(event)) {
+            if (new KeyCodeCombination(KeyCode.P, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN).match(event)) {
                 viewTrashedProjects();
             }
         });
@@ -316,6 +319,7 @@ public class Controller {
             changePassword.setDisable(true);
 
         }
+        newTaskTextField.setTooltip(tooltip);
         fetchUnlockedNoteTitles();
         fetchUnlockedProjectTitles();
 
@@ -325,7 +329,7 @@ public class Controller {
      * event handler for new project menu item
      */
     public void onCreateNewProject() {
-        Dialog<Pair<String, LocalDate>> dialog = new Dialog<>();
+        Dialog dialog = new Dialog<>();
         dialog.setTitle("New Project");
 
 // Set the button types.
@@ -347,7 +351,10 @@ public class Controller {
         grid.add(title, 1, 0);
         grid.add(new Label("Due (optional):"), 0, 1);
         grid.add(datePicker, 1, 1);
-
+        Label errors = new Label();
+        errors.setPrefWidth(340);
+        errors.setTextFill(javafx.scene.paint.Color.RED);
+        grid.add(errors, 1, 2);
 // Enable/Disable login button depending on whether a title was entered.
         Node saveButton = dialog.getDialogPane().lookupButton(saveButtonType);
         saveButton.setDisable(true);
@@ -361,19 +368,20 @@ public class Controller {
 // Request focus on the title field by default.
         Platform.runLater(title::requestFocus);
 
-// Convert the result to a title-datePicker-pair when the login button is clicked.
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == saveButtonType) {
-                return new Pair<String, LocalDate>(title.getText(), datePicker.getValue());
+        final Button btOk = (Button) dialog.getDialogPane().lookupButton(saveButtonType);
+        btOk.addEventFilter(ActionEvent.ACTION, (event) -> {
+//            result.ifPresent(titleDue -> {
+            if (databaseOperations.isProjectExists(title.getText().trim())) {
+                event.consume();
+                saveButton.setDisable(true);
+                errors.setText("A project with that name already exists");
+            } else {
+                saveNewProject(title.getText().trim(), datePicker.getValue());
+
             }
-            return null;
+//            });
         });
-
-        Optional<Pair<String, LocalDate>> result = dialog.showAndWait();
-
-        result.ifPresent(titleDue -> {
-            saveNewProject(titleDue.getKey(), titleDue.getValue());
-        });
+        dialog.showAndWait();
     }
 
     /**
@@ -397,7 +405,10 @@ public class Controller {
         title.setPrefWidth(340);
         grid.add(new Label("Title:"), 0, 0);
         grid.add(title, 1, 0);
-
+        Label errors = new Label();
+        errors.setPrefWidth(340);
+        errors.setTextFill(javafx.scene.paint.Color.RED);
+        grid.add(errors, 1, 2);
 
 // Enable/Disable login button depending on whether a title was entered.
         Node saveButton = dialog.getDialogPane().lookupButton(saveButtonType);
@@ -412,20 +423,25 @@ public class Controller {
 // Request focus on the title field by default.
         Platform.runLater(title::requestFocus);
 
-// Convert the result to a title-datePicker-pair when the login button is clicked.
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == saveButtonType) {
-                return title.getText();
-            }
-            return null;
-        });
+        final Button btOk = (Button) dialog.getDialogPane().lookupButton(saveButtonType);
+        btOk.addEventFilter(ActionEvent.ACTION, (event) -> {
+//            result.ifPresent(titleDue -> {
+            if (databaseOperations.isNoteExists(title.getText().trim())) {
+                event.consume();
+                saveButton.setDisable(true);
+                errors.setText("A note with that name already exists");
+            } else {
+                databaseOperations.createNote(title.getText().trim());
+                tabPane.getSelectionModel().selectLast();
+                fetchUnlockedNoteTitles();
 
-        Optional result = dialog.showAndWait();
-        result.ifPresent(titleDue -> {
-            databaseOperations.createNote(titleDue.toString());
-            tabPane.getSelectionModel().selectLast();
-            fetchUnlockedNoteTitles();
+            }
+//            });
         });
+//        result.ifPresent(titleDue -> {
+
+//        });
+        dialog.showAndWait();
     }
 
     private void confirmTrashingProject(ListCell<String> cell) {
@@ -578,14 +594,6 @@ public class Controller {
 // Request focus on the title field by default.
             Platform.runLater(password::requestFocus);
 
-// Convert the result to a title-datePicker-pair when the login button is clicked.
-            dialog.setResultConverter(dialogButton -> {
-                if (dialogButton == saveButtonType) {
-                    return password.getText();
-                }
-                return null;
-            });
-
             final Button btOk = (Button) dialog.getDialogPane().lookupButton(saveButtonType);
             btOk.addEventFilter(ActionEvent.ACTION, (event) -> {
                 if (databaseOperations.isCurrentPassword(password.getText().trim())) {
@@ -714,14 +722,6 @@ public class Controller {
 
 // Request focus on the title field by default.
             Platform.runLater(password::requestFocus);
-
-// Convert the result to a title-datePicker-pair when the login button is clicked.
-            dialog.setResultConverter(dialogButton -> {
-                if (dialogButton == saveButtonType) {
-                    return password.getText();
-                }
-                return null;
-            });
 
             final Button btOk = (Button) dialog.getDialogPane().lookupButton(saveButtonType);
             btOk.addEventFilter(ActionEvent.ACTION, (event) -> {
@@ -983,14 +983,6 @@ public class Controller {
 // Request focus on the title field by default.
         Platform.runLater(description::requestFocus);
 
-// Convert the result to a title-datePicker-pair when the login button is clicked.
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == saveButtonType) {
-                return description.getText();
-            }
-            return null;
-        });
-
         Optional result = dialog.showAndWait();
         result.ifPresent(desc -> {
             databaseOperations.updateProjectDescription(itemName, desc.toString());
@@ -1033,14 +1025,6 @@ public class Controller {
 // Request focus on the title field by default.
         Platform.runLater(description::requestFocus);
 
-// Convert the result to a title-datePicker-pair when the login button is clicked.
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == saveButtonType) {
-                return description.getText();
-            }
-            return null;
-        });
-
         Optional result = dialog.showAndWait();
         result.ifPresent(desc -> {
             databaseOperations.updateProjectDescription(itemName, desc.toString());
@@ -1049,6 +1033,7 @@ public class Controller {
     }
 
     public void typingTask() {
+        tooltip.hide();
         if (!newTaskTextField.getText().trim().isEmpty()) {
             saveNewTask.setDisable(false);
         } else {
@@ -1059,12 +1044,21 @@ public class Controller {
     //add a new task
     public void addProjectTask() {
         if (!newTaskTextField.getText().trim().isEmpty()) {
-            databaseOperations.createTask(newTaskTextField.getText().trim(), itemId, priorityBox.getValue().toString());
-            newTaskTextField.setText("");
-            saveNewTask.setDisable(true);
-            priorityBox.setValue("Low");
-            fetchProjectTasks();
-
+            if (databaseOperations.isTaskExists(newTaskTextField.getText().trim())) {
+                System.out.println("task exists");
+                Point2D p = newTaskTextField.localToScene(0.0, 0.0);
+                tooltip.show(newTaskTextField,p.getX()
+                        + newTaskTextField.getScene().getX() + newTaskTextField.getScene().getWindow().getX(), p.getY()
+                        + newTaskTextField.getScene().getY() + newTaskTextField.getScene().getWindow().getY()+newTaskTextField.getHeight()+2);
+                saveNewTask.setDisable(true);
+//                tooltip.hide();
+            } else {
+                databaseOperations.createTask(newTaskTextField.getText().trim(), itemId, priorityBox.getValue().toString());
+                newTaskTextField.setText("");
+                saveNewTask.setDisable(true);
+                priorityBox.setValue("Low");
+                fetchProjectTasks();
+            }
         }
     }
 
@@ -2001,14 +1995,6 @@ public class Controller {
 // Request focus on the title field by default.
         Platform.runLater(password::requestFocus);
 
-// Convert the result to a title-datePicker-pair when the login button is clicked.
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == saveButtonType) {
-                return new Pair<>(password.getText(), confirmPassword.getText());
-            }
-            return null;
-        });
-
         Optional<Pair<String, String>> result = dialog.showAndWait();
 
         result.ifPresent(passwordConfirm -> {
@@ -2094,14 +2080,6 @@ public class Controller {
 
 // Request focus on the title field by default.
         Platform.runLater(currentPassword::requestFocus);
-
-// Convert the result to a title-datePicker-pair when the login button is clicked.
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == saveButtonType) {
-                return currentPassword.getText();
-            }
-            return null;
-        });
 
         Optional result = dialog.showAndWait();
         result.ifPresent(titleDue -> {
