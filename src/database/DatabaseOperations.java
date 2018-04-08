@@ -5,6 +5,8 @@ import java.sql.*;
 import java.util.ArrayList;
 
 public class DatabaseOperations {
+    PasswordAuthentication passwordAuthentication = new PasswordAuthentication();
+
     /**
      * Connect to the prac.db database
      *
@@ -225,6 +227,7 @@ public class DatabaseOperations {
             System.out.println(e.getMessage());
         }
     }
+
     /**
      * delete a note completely
      *
@@ -248,6 +251,7 @@ public class DatabaseOperations {
             System.out.println(e.getMessage());
         }
     }
+
     /**
      * delete a note completely
      *
@@ -274,8 +278,6 @@ public class DatabaseOperations {
 
     /**
      * Empty trash
-     *
-     *
      */
     public void emptyProjectTrash() {
         String sql = "DELETE FROM TRASH_PROJECTS";
@@ -684,6 +686,7 @@ public class DatabaseOperations {
             System.out.println(e.getMessage());
         }
     }
+
     /**
      * Empty tasks trash
      */
@@ -893,5 +896,81 @@ public class DatabaseOperations {
             e.getMessage();
         }
         return arrayList;
+    }
+
+    /**
+     * Add a new password
+     *
+     * @param password
+     */
+    public void addPassword(String password) {
+        String sql = "INSERT INTO PASSWORD(SALT) VALUES(?)";
+        try (Connection connection = this.connect();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, passwordAuthentication.hash(password.toCharArray()));
+            preparedStatement.executeUpdate();
+
+        } catch (SQLException exception) {
+            exception.getMessage();
+        }
+    }
+
+    /**
+     * Determine if a password exists
+     *
+     * @return boolean
+     */
+    public boolean isPassword() {
+        String sql = "SELECT SALT FROM PASSWORD";
+        try (Connection connection = this.connect();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            ResultSet resultSet = preparedStatement.executeQuery();
+            if (resultSet.next()) {
+                return true;
+            }
+
+        } catch (SQLException exception) {
+            exception.getMessage();
+        }
+        return false;
+    }
+
+    /**
+     * Confirm if input password is current password
+     *
+     * @return boolean
+     */
+    public boolean isCurrentPassword(String password) {
+        String sql = "SELECT SALT FROM PASSWORD";
+        try (Connection connection = this.connect();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            ResultSet resultSet = preparedStatement.executeQuery();
+            if (resultSet.next()) {
+                String currentPassword = resultSet.getString("SALT");
+                if (passwordAuthentication.authenticate(password.toCharArray(), currentPassword))
+                    return true;
+            }
+
+        } catch (SQLException exception) {
+            exception.getMessage();
+        }
+        return false;
+    }
+
+    /**
+     * Change password
+     *
+     * @param password
+     */
+    public void changePassword(String password) {
+            String sql = "UPDATE PASSWORD  SET SALT=?";
+        try (Connection connection = this.connect();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, passwordAuthentication.hash(password.toCharArray()));
+            preparedStatement.executeUpdate();
+
+        } catch (SQLException exception) {
+            exception.getMessage();
+        }
     }
 }
