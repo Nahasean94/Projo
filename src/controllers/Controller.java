@@ -1,10 +1,13 @@
 package controllers;
 
 import database.DatabaseOperations;
+import database.PasswordAuthentication;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
@@ -83,6 +86,8 @@ public class Controller {
     private VBox metaBox;
     @FXML
     private AnchorPane mainAnchor;
+    @FXML
+    private MenuItem addPasswordMenu,changePassword;
 
     private String projectDescriptionText = "";
     private ArrayList projectsArrayList;
@@ -268,6 +273,15 @@ public class Controller {
 
         fetchNoteTitles();
         fetchProjectTitles();
+
+        //disable the add button menu item if a password exists in the db
+        if (databaseOperations.isPassword()) {
+            addPasswordMenu.setDisable(true);
+
+        }else{
+            changePassword.setDisable(true);
+
+        }
     }
 
     /**
@@ -1054,7 +1068,7 @@ public class Controller {
         }
     }
 
-    public void viewSourceCode() {
+    private void viewSourceCode() {
         try {
             Desktop.getDesktop().browse(new URL("https://github.com/Nahasean94/Projo").toURI());
         } catch (IOException | URISyntaxException e) {
@@ -1717,7 +1731,7 @@ public class Controller {
         grid.add(shortcut, 0, 13);
         Text keyboardShortcuts = new Text("View keyboard shortcuts");
         grid.add(keyboardShortcuts, 1, 13, 2, 1);
-Text etc = new Text("Others:");
+        Text etc = new Text("Others:");
         etc.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
         grid.add(etc, 0, 13);
         Text others = new Text("Other Operating Systems Shortcuts may work");
@@ -1737,7 +1751,151 @@ Text etc = new Text("Others:");
         stage.showAndWait();
     }
 
+    public void addPassword() {
+        Dialog<Pair<String, String>> dialog = new Dialog<>();
+        dialog.setTitle("New Password");
 
+// Set the button types.
+        ButtonType saveButtonType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, ButtonType.CANCEL);
+
+// Create the title and datePicker labels and fields.
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(12, 10, 10, 10));
+        PasswordField password = new PasswordField();
+        password.setPromptText("Password");
+        password.setPrefWidth(340);
+        PasswordField confirmPassword = new PasswordField();
+        confirmPassword.setPromptText("Confirm Password");
+        confirmPassword.setPrefWidth(340);
+        grid.add(new Label("Password:"), 0, 0);
+        grid.add(password, 1, 0);
+        grid.add(new Label("Confirm password:"), 0, 1);
+        grid.add(confirmPassword, 1, 1);
+
+// Enable/Disable login button depending on whether a title was entered.
+        Node saveButton = dialog.getDialogPane().lookupButton(saveButtonType);
+        saveButton.setDisable(true);
+
+// Do some validation (using the Java 8 lambda syntax).
+        confirmPassword.textProperty().addListener((observable, oldValue, newValue) -> {
+            saveButton.setDisable(!newValue.trim().equals(password.getText().trim()));
+        });
+        dialog.getDialogPane().setContent(grid);
+
+// Request focus on the title field by default.
+        Platform.runLater(password::requestFocus);
+
+// Convert the result to a title-datePicker-pair when the login button is clicked.
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == saveButtonType) {
+                return new Pair<>(password.getText(), confirmPassword.getText());
+            }
+            return null;
+        });
+
+        Optional<Pair<String, String>> result = dialog.showAndWait();
+
+        result.ifPresent(passwordConfirm -> {
+            databaseOperations.addPassword(passwordConfirm.getKey());
+            if (databaseOperations.isPassword()) {
+                addPasswordMenu.setDisable(true);
+                changePassword.setDisable(false);
+
+            }else{
+                changePassword.setDisable(true);
+                addPasswordMenu.setDisable(false);
+
+            }
+        });
+
+    }
+
+    public void changePassword() {
+        Dialog dialog = new Dialog();
+        dialog.setTitle("Change Password");
+
+// Set the button types.
+        ButtonType saveButtonType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, ButtonType.CANCEL);
+
+// Create the title and datePicker labels and fields.
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(12, 10, 10, 10));
+        PasswordField currentPassword = new PasswordField();
+        currentPassword.setPromptText("Current Password");
+        grid.add(currentPassword, 1, 0);
+        currentPassword.setPrefWidth(340);
+        grid.add(new Label("Current Password:"), 0, 0);
+        PasswordField newPassword = new PasswordField();
+        newPassword.setPromptText("New Password");
+        newPassword.setPrefWidth(340);
+        grid.add(newPassword, 1, 1);
+        grid.add(new Label("New Password:"), 0, 1);
+        PasswordField confirmNewPassword = new PasswordField();
+        confirmNewPassword.setPromptText("Confirm New Password");
+        confirmNewPassword.setPrefWidth(340);
+        grid.add(confirmNewPassword, 1, 2);
+        grid.add(new Label("Confirm New Password:"), 0, 2);
+        Hyperlink forgotPassword = new Hyperlink("Forgot Password");
+        forgotPassword.setPrefWidth(340);
+        grid.add(forgotPassword, 1, 3);
+        Label errors = new Label();
+        errors.setPrefWidth(340);
+        errors.setTextFill(javafx.scene.paint.Color.RED);
+        grid.add(errors, 1, 4);
+
+
+// Enable/Disable login button depending on whether a title was entered.
+        Node saveButton = dialog.getDialogPane().lookupButton(saveButtonType);
+        saveButton.setDisable(true);
+
+// Do some validation (using the Java 8 lambda syntax).
+        confirmNewPassword.textProperty().addListener((observable, oldValue, newValue) -> {
+            saveButton.setDisable(!newValue.trim().equals(newPassword.getText().trim()));
+        });
+        currentPassword.focusedProperty().addListener((arg0, oldPropertyValue, newPropertyValue) -> {
+            if (!newPropertyValue)
+            {
+                if(!databaseOperations.isCurrentPassword(currentPassword.getText())){
+                saveButton.setDisable(true);
+                errors.setText("Current Password is incorrrect");
+//                currentPassword.requestFocus();
+                }
+                else{
+                    errors.setText("");
+                }
+            }
+
+
+        });
+        dialog.getDialogPane().setContent(grid);
+
+// Request focus on the title field by default.
+        Platform.runLater(currentPassword::requestFocus);
+
+// Convert the result to a title-datePicker-pair when the login button is clicked.
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == saveButtonType) {
+                return currentPassword.getText();
+            }
+            return null;
+        });
+
+        Optional result = dialog.showAndWait();
+        result.ifPresent(titleDue -> {
+            databaseOperations.changePassword(newPassword.getText());
+        });
+    }
+
+
+    /**
+     * Data classes to be used in various tables
+     */
     public static class Task {
         private SimpleStringProperty taskName;
         private SimpleIntegerProperty taskId;
