@@ -703,8 +703,25 @@ public class DatabaseOperations {
     /**
      * Fetch all project tiles
      */
-    public ArrayList loadProjectTitles() {
-        String sql = "SELECT * FROM PROJECTS WHERE TRASH=0";
+    public ArrayList loadUnlockedProjectTitles() {
+        String sql = "SELECT * FROM PROJECTS WHERE TRASH=0 AND LOCKED=0";
+        ResultSet resultSet;
+        ArrayList arrayList = new ArrayList();
+        try (Connection conn = this.connect();
+             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            resultSet = preparedStatement.executeQuery();
+            while (resultSet.next()) {
+                String name = resultSet.getString("NAME");
+                int id = resultSet.getInt("ID");
+                arrayList.add(name);
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+        return arrayList;
+    }
+    public ArrayList loadAllProjectTitles() {
+        String sql = "SELECT * FROM PROJECTS WHERE TRASH=0 ";
         ResultSet resultSet;
         ArrayList arrayList = new ArrayList();
         try (Connection conn = this.connect();
@@ -722,6 +739,23 @@ public class DatabaseOperations {
     }
 
     public ArrayList loadNoteTitles() {
+        String sql = "SELECT * FROM NOTES WHERE TRASHED=0 AND LOCKED=0";
+        ResultSet resultSet;
+        ArrayList arrayList = new ArrayList();
+        try (Connection conn = this.connect();
+             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            resultSet = preparedStatement.executeQuery();
+            while (resultSet.next()) {
+                String title = resultSet.getString("TITLE");
+                int id = resultSet.getInt("ID");
+                arrayList.add(title);
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+        return arrayList;
+    }
+ public ArrayList loadAllNoteTitles() {
         String sql = "SELECT * FROM NOTES WHERE TRASHED=0";
         ResultSet resultSet;
         ArrayList arrayList = new ArrayList();
@@ -963,7 +997,7 @@ public class DatabaseOperations {
      * @param password
      */
     public void changePassword(String password) {
-            String sql = "UPDATE PASSWORD  SET SALT=?";
+        String sql = "UPDATE PASSWORD  SET SALT=?";
         try (Connection connection = this.connect();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setString(1, passwordAuthentication.hash(password.toCharArray()));
@@ -972,5 +1006,29 @@ public class DatabaseOperations {
         } catch (SQLException exception) {
             exception.getMessage();
         }
+    }
+
+    public void lockProject(String name) {
+        String sql = "UPDATE PROJECTS SET LOCKED=1 WHERE NAME=?";
+        try (Connection connection = this.connect();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, name);
+            preparedStatement.executeUpdate();
+        } catch (SQLException e) {
+            e.getMessage();
+        }
+
+    }
+
+    public void lockNote(String title) {
+        String sql = "UPDATE NOTES SET LOCKED=1 WHERE TITLE=?";
+        try (Connection connection = this.connect();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, title);
+            preparedStatement.executeUpdate();
+        } catch (SQLException e) {
+            e.getMessage();
+        }
+
     }
 }

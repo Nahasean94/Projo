@@ -10,6 +10,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -87,7 +88,7 @@ public class Controller {
     @FXML
     private AnchorPane mainAnchor;
     @FXML
-    private MenuItem addPasswordMenu,changePassword;
+    private MenuItem addPasswordMenu, changePassword, hideLockedItems, viewLockedProjects, viewLockedNotes;
 
     private String projectDescriptionText = "";
     private ArrayList projectsArrayList;
@@ -193,7 +194,7 @@ public class Controller {
                     } else {
                         databaseOperations.eraseProject(projectTitles.getSelectionModel().getSelectedItem().toString());
                     }
-                    fetchProjectTitles();
+                    fetchUnlockedProjectTitles();
                     projectTitles.getSelectionModel().selectFirst();
                 }
 
@@ -223,7 +224,7 @@ public class Controller {
                     } else {
                         databaseOperations.eraseNote(noteTitles.getSelectionModel().getSelectedItem().toString());
                     }
-                    fetchNoteTitles();
+                    fetchUnlockedNoteTitles();
                     noteTitles.getSelectionModel().selectFirst();
                 }
 
@@ -232,7 +233,19 @@ public class Controller {
                 confirmTrashingNote();
             }
         });
-//permanently delete a task
+        //lock a project
+        projectTitles.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+            if (new KeyCodeCombination(KeyCode.L, KeyCombination.CONTROL_DOWN).match(event)) {
+                lockItems();
+            }
+        });
+        //Lock a note
+        noteTitles.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+            if (new KeyCodeCombination(KeyCode.L, KeyCombination.CONTROL_DOWN).match(event)) {
+                lockItems();
+            }
+        });
+        //permanently delete a task
         tasksTable.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
             if (new KeyCodeCombination(KeyCode.DELETE, KeyCombination.SHIFT_DOWN).match(event)) {
                 Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
@@ -270,18 +283,42 @@ public class Controller {
                 saveNote();
             }
         });
+        //view locked projects
+        noteBody.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+            if (new KeyCodeCombination(KeyCode.P, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN).match(event)) {
+                fetchAllProjectTitles();
+            }
+        });
+        //view locked notes
+        noteBody.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+            if (new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN).match(event)) {
+                fetchAllNoteTitles();
+            }
+        });
+        //hide locked notes
+        noteBody.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+            if (new KeyCodeCombination(KeyCode.H, KeyCombination.CONTROL_DOWN).match(event)) {
+                onHideLockedItems();
+            }
+        });
 
-        fetchNoteTitles();
-        fetchProjectTitles();
 
         //disable the add button menu item if a password exists in the db
         if (databaseOperations.isPassword()) {
             addPasswordMenu.setDisable(true);
+            noteBody.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+                if (new KeyCodeCombination(KeyCode.P, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN).match(event)) {
+                    changePassword();
+                }
+            });
 
-        }else{
+        } else {
             changePassword.setDisable(true);
 
         }
+        fetchUnlockedNoteTitles();
+        fetchUnlockedProjectTitles();
+
     }
 
     /**
@@ -387,67 +424,7 @@ public class Controller {
         result.ifPresent(titleDue -> {
             databaseOperations.createNote(titleDue.toString());
             tabPane.getSelectionModel().selectLast();
-            fetchNoteTitles();
-        });
-    }
-
-    /**
-     * Fetch project titles
-     */
-
-    private void fetchProjectTitles() {
-        projectsArrayList = databaseOperations.loadProjectTitles();
-        if (projectsArrayList.isEmpty()) {
-            tasksPane.setDisable(true);
-            descriptionPane.setDisable(true);
-        }
-        if (!projectsArrayList.isEmpty()) {
-            try {
-                ObservableList observableList = FXCollections.observableArrayList(reverse(projectsArrayList));
-                projectTitles.setEditable(true);
-                projectsTab.setText("Projects (" + projectsArrayList.size() + ")");
-                projectTitles.setCellFactory(TextFieldListCell.forListView());
-                projectTitles.setOnEditCommit((EventHandler<ListView.EditEvent<String>>) t -> {
-                    if (!t.getNewValue().isEmpty()) {
-                        String oldValue = projectTitles.getSelectionModel().getSelectedItem().toString();
-                        projectTitles.getItems().set(t.getIndex(), t.getNewValue());
-                        databaseOperations.editProjectName(oldValue, t.getNewValue().toString());
-                    }
-                });
-                projectTitles.setItems(observableList);
-                projectTitles.getSelectionModel().clearSelection();
-                projectTitles.getSelectionModel().selectFirst();
-                onProjectClicked();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        projectTitles.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        projectTitles.setOnKeyPressed(keyEvent -> {
-            if (keyEvent.getCode() == KeyCode.ENTER) {
-                projectTitles.setEditable(false);
-                onProjectClicked();
-            }
-        });
-        projectTitles.setCellFactory(lv -> {
-            ListCell<String> cell = new ListCell<>();
-            ContextMenu contextMenu = new ContextMenu();
-            MenuItem deleteItem = new MenuItem();
-            deleteItem.textProperty().bind(Bindings.format("Delete", cell.itemProperty()));
-            deleteItem.setOnAction(event -> {
-                confirmTrashingProject(cell);
-
-            });
-            contextMenu.getItems().addAll(deleteItem);
-            cell.textProperty().bind(cell.itemProperty());
-            cell.emptyProperty().addListener((obs, wasEmpty, isNowEmpty) -> {
-                if (isNowEmpty) {
-                    cell.setContextMenu(null);
-                } else {
-                    cell.setContextMenu(contextMenu);
-                }
-            });
-            return cell;
+            fetchUnlockedNoteTitles();
         });
     }
 
@@ -463,7 +440,7 @@ public class Controller {
         Optional<ButtonType> result = alert.showAndWait();
         if (result.get() == ButtonType.OK) {
             deleteProject(cell);
-            fetchProjectTitles();
+            fetchUnlockedProjectTitles();
             projectTitles.getSelectionModel().selectFirst();
         }
     }
@@ -487,7 +464,7 @@ public class Controller {
             } else {
                 databaseOperations.trashProject(projectTitles.getSelectionModel().getSelectedItem().toString());
             }
-            fetchProjectTitles();
+            fetchUnlockedProjectTitles();
             projectTitles.getSelectionModel().selectFirst();
         }
     }
@@ -511,7 +488,7 @@ public class Controller {
             } else {
                 databaseOperations.trashNote(noteTitles.getSelectionModel().getSelectedItem().toString());
             }
-            fetchNoteTitles();
+            fetchUnlockedNoteTitles();
             noteTitles.getSelectionModel().selectFirst();
         }
     }
@@ -559,14 +536,228 @@ public class Controller {
      * Fetch project titles
      */
 
-    private void fetchNoteTitles() {
+    private void fetchUnlockedProjectTitles() {
+        processProjectTitles(databaseOperations.loadUnlockedProjectTitles());
+
+    }
+
+    public void fetchAllProjectTitles() {
+        if (!viewLockedProjects.isDisable()) {
+            Dialog dialog = new Dialog();
+            dialog.setTitle("Enter password to view locked items");
+
+// Set the button types.
+            ButtonType saveButtonType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
+            dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, ButtonType.CANCEL);
+
+// Create the title and datePicker labels and fields.
+            GridPane grid = new GridPane();
+            grid.setHgap(10);
+            grid.setVgap(10);
+            grid.setPadding(new Insets(12, 10, 10, 10));
+            PasswordField password = new PasswordField();
+            password.setPromptText("Password");
+            password.setPrefWidth(340);
+            grid.add(new Label("Password:"), 0, 0);
+            grid.add(password, 1, 0);
+            Label errors = new Label();
+            errors.setPrefWidth(340);
+            errors.setTextFill(javafx.scene.paint.Color.RED);
+            grid.add(errors, 1, 1);
+
+// Enable/Disable login button depending on whether a title was entered.
+            Node saveButton = dialog.getDialogPane().lookupButton(saveButtonType);
+            saveButton.setDisable(true);
+
+// Do some validation (using the Java 8 lambda syntax).
+            password.textProperty().addListener((observable, oldValue, newValue) -> {
+                saveButton.setDisable(newValue.trim().isEmpty());
+            });
+            dialog.getDialogPane().setContent(grid);
+
+// Request focus on the title field by default.
+            Platform.runLater(password::requestFocus);
+
+// Convert the result to a title-datePicker-pair when the login button is clicked.
+            dialog.setResultConverter(dialogButton -> {
+                if (dialogButton == saveButtonType) {
+                    return password.getText();
+                }
+                return null;
+            });
+
+            final Button btOk = (Button) dialog.getDialogPane().lookupButton(saveButtonType);
+            btOk.addEventFilter(ActionEvent.ACTION, (event) -> {
+                if (databaseOperations.isCurrentPassword(password.getText().trim())) {
+                    processProjectTitles(databaseOperations.loadAllProjectTitles());
+                    tabPane.getSelectionModel().selectFirst();
+                    errors.setText("");
+                    hideLockedItems.setDisable(false);
+                    viewLockedProjects.setDisable(true);
+                } else {
+                    event.consume();
+                    saveButton.setDisable(true);
+                    errors.setText("Current Password is incorrrect");
+                }
+
+            });
+            dialog.showAndWait();
+        }
+
+    }
+
+    private void processProjectTitles(ArrayList projectsArrayList) {
+        if (projectsArrayList.isEmpty()) {
+            tasksPane.setDisable(true);
+            descriptionPane.setDisable(true);
+        }
+        if (!projectsArrayList.isEmpty()) {
+            try {
+                ObservableList observableList = FXCollections.observableArrayList(reverse(projectsArrayList));
+                projectTitles.setEditable(true);
+                projectsTab.setText("Projects (" + projectsArrayList.size() + ")");
+                projectTitles.setCellFactory(TextFieldListCell.forListView());
+                projectTitles.setOnEditCommit((EventHandler<ListView.EditEvent<String>>) t -> {
+                    if (!t.getNewValue().isEmpty()) {
+                        String oldValue = projectTitles.getSelectionModel().getSelectedItem().toString();
+                        projectTitles.getItems().set(t.getIndex(), t.getNewValue());
+                        databaseOperations.editProjectName(oldValue, t.getNewValue().toString());
+                    }
+                });
+                projectTitles.setItems(observableList);
+                projectTitles.getSelectionModel().clearSelection();
+                projectTitles.getSelectionModel().selectFirst();
+                onProjectClicked();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        projectTitles.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        projectTitles.setOnKeyPressed(keyEvent -> {
+            if (keyEvent.getCode() == KeyCode.ENTER) {
+                projectTitles.setEditable(false);
+                onProjectClicked();
+            }
+        });
+        projectTitles.setCellFactory(lv -> {
+            ListCell<String> cell = new ListCell<>();
+            ContextMenu contextMenu = new ContextMenu();
+            MenuItem lockItem = new MenuItem();
+            lockItem.textProperty().bind(Bindings.format("Lock", cell.itemProperty()));
+            lockItem.setOnAction(event -> {
+                lockItems();
+
+            });
+            lockItem.setAccelerator(new KeyCodeCombination(KeyCode.L, KeyCombination.CONTROL_DOWN));
+            MenuItem deleteItem = new MenuItem();
+            deleteItem.textProperty().bind(Bindings.format("Delete", cell.itemProperty()));
+            deleteItem.setOnAction(event -> {
+                confirmTrashingProject();
+
+            });
+            deleteItem.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
+            contextMenu.getItems().addAll(lockItem, deleteItem);
+            cell.textProperty().bind(cell.itemProperty());
+            cell.emptyProperty().addListener((obs, wasEmpty, isNowEmpty) -> {
+                if (isNowEmpty) {
+                    cell.setContextMenu(null);
+                } else {
+                    cell.setContextMenu(contextMenu);
+                }
+            });
+            return cell;
+        });
+    }
+
+    /**
+     * Fetch project titles
+     */
+    private void fetchUnlockedNoteTitles() {
+        processNoteTitles(databaseOperations.loadNoteTitles());
+    }
+
+    public void fetchAllNoteTitles() {
+        if (!viewLockedNotes.isDisable()) {
+
+
+            Dialog dialog = new Dialog();
+            dialog.setTitle("Enter password to view locked items");
+
+// Set the button types.
+            ButtonType saveButtonType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
+            dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, ButtonType.CANCEL);
+
+// Create the title and datePicker labels and fields.
+            GridPane grid = new GridPane();
+            grid.setHgap(10);
+            grid.setVgap(10);
+            grid.setPadding(new Insets(12, 10, 10, 10));
+            PasswordField password = new PasswordField();
+            password.setPromptText("Password");
+            password.setPrefWidth(340);
+            grid.add(new Label("Password:"), 0, 0);
+            grid.add(password, 1, 0);
+            Label errors = new Label();
+            errors.setPrefWidth(340);
+            errors.setTextFill(javafx.scene.paint.Color.RED);
+            grid.add(errors, 1, 1);
+
+// Enable/Disable login button depending on whether a title was entered.
+            Node saveButton = dialog.getDialogPane().lookupButton(saveButtonType);
+            saveButton.setDisable(true);
+
+// Do some validation (using the Java 8 lambda syntax).
+            password.textProperty().addListener((observable, oldValue, newValue) -> {
+                saveButton.setDisable(newValue.trim().isEmpty());
+            });
+            dialog.getDialogPane().setContent(grid);
+
+// Request focus on the title field by default.
+            Platform.runLater(password::requestFocus);
+
+// Convert the result to a title-datePicker-pair when the login button is clicked.
+            dialog.setResultConverter(dialogButton -> {
+                if (dialogButton == saveButtonType) {
+                    return password.getText();
+                }
+                return null;
+            });
+
+            final Button btOk = (Button) dialog.getDialogPane().lookupButton(saveButtonType);
+            btOk.addEventFilter(ActionEvent.ACTION, (event) -> {
+                if (databaseOperations.isCurrentPassword(password.getText().trim())) {
+                    processNoteTitles(databaseOperations.loadAllNoteTitles());
+                    tabPane.getSelectionModel().selectLast();
+                    errors.setText("");
+                    hideLockedItems.setDisable(false);
+                    viewLockedNotes.setDisable(true);
+                } else {
+                    event.consume();
+                    saveButton.setDisable(true);
+                    errors.setText("Current Password is incorrrect");
+                }
+            });
+            dialog.showAndWait();
+        }
+    }
+
+    public void onHideLockedItems() {
+        if (!hideLockedItems.isDisable()) {
+            fetchUnlockedProjectTitles();
+            fetchUnlockedNoteTitles();
+            viewLockedNotes.setDisable(false);
+            viewLockedProjects.setDisable(false);
+            hideLockedItems.setDisable(true);
+        }
+    }
+
+    private void processNoteTitles(ArrayList notesArrayList) {
         noteTitles.setOnKeyPressed(keyEvent -> {
             if (keyEvent.getCode() == KeyCode.ENTER) {
                 noteTitles.setEditable(false);
                 onNoteClicked();
             }
         });
-        notesArrayList = databaseOperations.loadNoteTitles();
         if (notesArrayList.isEmpty()) {
             notesPane.setDisable(true);
         }
@@ -594,7 +785,13 @@ public class Controller {
 
             ListCell<String> cell = new ListCell<>();
             ContextMenu contextMenu = new ContextMenu();
+            MenuItem lockItem = new MenuItem();
+            lockItem.textProperty().bind(Bindings.format("Lock", cell.itemProperty()));
+            lockItem.setOnAction(event -> {
+                lockItems();
 
+            });
+            lockItem.setAccelerator(new KeyCodeCombination(KeyCode.L, KeyCombination.CONTROL_DOWN));
             MenuItem deleteItem = new MenuItem();
             deleteItem.textProperty().bind(Bindings.format("Delete", cell.itemProperty()));
             deleteItem.setOnAction(event -> {
@@ -617,12 +814,12 @@ public class Controller {
                         databaseOperations.trashNote(cell.getItem());
                     }
                     noteTitles.getSelectionModel().selectFirst();
-                    fetchNoteTitles();
+                    fetchUnlockedNoteTitles();
                 }
 
             });
-
-            contextMenu.getItems().addAll(deleteItem);
+            deleteItem.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
+            contextMenu.getItems().addAll(lockItem, deleteItem);
             cell.textProperty().bind(cell.itemProperty());
             cell.emptyProperty().addListener((obs, wasEmpty, isNowEmpty) -> {
                 if (isNowEmpty) {
@@ -633,7 +830,6 @@ public class Controller {
             });
             return cell;
         });
-
     }
 
     private void saveNewProject(String title, LocalDate due) {
@@ -642,10 +838,10 @@ public class Controller {
         } else {
             databaseOperations.createNewProject(title.trim());
         }
-        fetchProjectTitles();
+        fetchUnlockedProjectTitles();
         tabPane.getSelectionModel().selectFirst();
 
-//        fetchNoteTitles();
+//        fetchUnlockedNoteTitles();
     }
 
     //Reverse the elements of an arraylist to bring the most recent title on top
@@ -1151,7 +1347,7 @@ public class Controller {
 
                 projectsTrashTable(stage);
                 tabPane.getSelectionModel().selectFirst();
-                fetchProjectTitles();
+                fetchUnlockedProjectTitles();
                 if (projectsTrash.getSelectionModel().getSelectedItem() != null) {
                     TrashedProjects selectedTask = (TrashedProjects) projectsTrash.getSelectionModel().getSelectedItem();
                     projectTitles.getSelectionModel().select(selectedTask.getProjectName());
@@ -1177,7 +1373,7 @@ public class Controller {
                 }
                 projectsTrashTable(stage);
                 tabPane.getSelectionModel().selectFirst();
-                fetchProjectTitles();
+                fetchUnlockedProjectTitles();
             });
             MenuItem deleteItem = new MenuItem();
             deleteItem.textProperty().bind(Bindings.format("Delete Permanently", cell.itemProperty()));
@@ -1325,7 +1521,7 @@ public class Controller {
 
                 tabPane.getSelectionModel().selectLast();
                 notesTrashTable(stage);
-                fetchNoteTitles();
+                fetchUnlockedNoteTitles();
                 if (notesTrash.getSelectionModel().getSelectedItem() != null) {
                     TrashedNotes selectedNote = (TrashedNotes) notesTrash.getSelectionModel().getSelectedItem();
                     projectTitles.getSelectionModel().select(selectedNote.getNoteName());
@@ -1353,7 +1549,7 @@ public class Controller {
 
                 tabPane.getSelectionModel().selectLast();
                 notesTrashTable(stage);
-                fetchNoteTitles();
+                fetchUnlockedNoteTitles();
                 if (notesTrash.getSelectionModel().getSelectedItem() != null) {
                     TrashedNotes selectedNote = (TrashedNotes) notesTrash.getSelectionModel().getSelectedItem();
                     noteTitles.getSelectionModel().select(selectedNote.getNoteName());
@@ -1505,7 +1701,7 @@ public class Controller {
 
                 tabPane.getSelectionModel().selectFirst();
                 trashTasksTable(stage);
-                fetchProjectTitles();
+                fetchUnlockedProjectTitles();
                 if (tasksTrash.getSelectionModel().getSelectedItem() != null) {
                     TrashedTasks selectedTask = (TrashedTasks) tasksTrash.getSelectionModel().getSelectedItem();
                     projectTitles.getSelectionModel().select(selectedTask.getProjectName());
@@ -1532,7 +1728,7 @@ public class Controller {
 
                 tabPane.getSelectionModel().selectFirst();
                 trashTasksTable(stage);
-                fetchProjectTitles();
+                fetchUnlockedProjectTitles();
                 if (tasksTrash.getSelectionModel().getSelectedItem() != null) {
                     TrashedTasks selectedTask = (TrashedTasks) tasksTrash.getSelectionModel().getSelectedItem();
                     projectTitles.getSelectionModel().select(selectedTask.getProjectName());
@@ -1726,6 +1922,23 @@ public class Controller {
         grid.add(info, 0, 12);
         Text about = new Text("View information about the app");
         grid.add(about, 1, 12, 2, 1);
+
+        Text lockedProjects = new Text("Ctrl+Alt+P:");
+        lockedProjects.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        grid.add(lockedProjects, 0, 13);
+        Text lockProjects = new Text("View locked projects");
+        grid.add(lockProjects, 1, 13, 2, 1);
+        Text lockedNotes = new Text("Ctrl+Alt+N:");
+        lockedNotes.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        grid.add(lockedNotes, 0, 14);
+        Text lockNotes = new Text("View locked notes");
+        grid.add(lockNotes, 1, 14, 2, 1);
+        Text changePassword = new Text("Shift+Alt+P:");
+        changePassword.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        grid.add(changePassword, 0, 14);
+        Text changingPassword = new Text("Change Password");
+        grid.add(changingPassword, 1, 14, 2, 1);
+
         Text shortcut = new Text("Ctrl+K:");
         shortcut.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
         grid.add(shortcut, 0, 13);
@@ -1803,8 +2016,13 @@ public class Controller {
             if (databaseOperations.isPassword()) {
                 addPasswordMenu.setDisable(true);
                 changePassword.setDisable(false);
+                noteBody.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+                    if (new KeyCodeCombination(KeyCode.P, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN).match(event)) {
+                        changePassword();
+                    }
+                });
 
-            }else{
+            } else {
                 changePassword.setDisable(true);
                 addPasswordMenu.setDisable(false);
 
@@ -1812,6 +2030,7 @@ public class Controller {
         });
 
     }
+
 
     public void changePassword() {
         Dialog dialog = new Dialog();
@@ -1859,14 +2078,12 @@ public class Controller {
             saveButton.setDisable(!newValue.trim().equals(newPassword.getText().trim()));
         });
         currentPassword.focusedProperty().addListener((arg0, oldPropertyValue, newPropertyValue) -> {
-            if (!newPropertyValue)
-            {
-                if(!databaseOperations.isCurrentPassword(currentPassword.getText())){
-                saveButton.setDisable(true);
-                errors.setText("Current Password is incorrrect");
+            if (!newPropertyValue) {
+                if (!databaseOperations.isCurrentPassword(currentPassword.getText())) {
+                    saveButton.setDisable(true);
+                    errors.setText("Current Password is incorrrect");
 //                currentPassword.requestFocus();
-                }
-                else{
+                } else {
                     errors.setText("");
                 }
             }
@@ -1890,6 +2107,62 @@ public class Controller {
         result.ifPresent(titleDue -> {
             databaseOperations.changePassword(newPassword.getText());
         });
+    }
+
+    private void lockItems() {
+        if (tabPane.getSelectionModel().isSelected(0)) {
+            lockProjects();
+        } else {
+            lockNotes();
+        }
+    }
+
+    private void lockProjects() {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirm Locking");
+        alert.setContentText("You will require a password to view locked items");
+        if (projectTitles.getSelectionModel().getSelectedItems().size() > 1) {
+            alert.setHeaderText("Are you sure you want to lock " + projectTitles.getSelectionModel().getSelectedItems().size() + " projects");
+        } else {
+            alert.setHeaderText("Are you sure you want to lock '" + projectTitles.getSelectionModel().getSelectedItem() + "'?");
+        }
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.get() == ButtonType.OK) {
+            if (projectTitles.getSelectionModel().getSelectedItems().size() > 1) {
+                ObservableList items = projectTitles.getSelectionModel().getSelectedItems();
+                for (Object item : items) {
+                    databaseOperations.lockProject(item.toString());
+                }
+            } else {
+                databaseOperations.lockProject(projectTitles.getSelectionModel().getSelectedItem().toString());
+            }
+            fetchUnlockedProjectTitles();
+            projectTitles.getSelectionModel().selectFirst();
+        }
+
+    }
+
+    private void lockNotes() {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirm Locking");
+        alert.setContentText("You will require a password to view locked items");
+        if (noteTitles.getSelectionModel().getSelectedItems().size() > 1) {
+            alert.setHeaderText("Are you sure you want to lock " + noteTitles.getSelectionModel().getSelectedItems().size() + " notes");
+        } else {
+            alert.setHeaderText("Are you sure you want to lock '" + noteTitles.getSelectionModel().getSelectedItem() + "'?");
+        }
+        Optional<ButtonType> result = alert.showAndWait();
+        if (noteTitles.getSelectionModel().getSelectedItems().size() > 1) {
+            ObservableList items = noteTitles.getSelectionModel().getSelectedItems();
+            for (Object item : items) {
+                databaseOperations.lockNote(item.toString());
+            }
+        } else {
+            databaseOperations.lockNote(noteTitles.getSelectionModel().getSelectedItem().toString());
+        }
+        fetchUnlockedNoteTitles();
+        noteTitles.getSelectionModel().selectFirst();
+
     }
 
 
