@@ -707,6 +707,12 @@ public class DatabaseOperations {
         String sql = "SELECT * FROM PROJECTS WHERE TRASH=0 AND LOCKED=0";
         ResultSet resultSet;
         ArrayList arrayList = new ArrayList();
+        projectTitles(sql, arrayList);
+        return arrayList;
+    }
+
+    private void projectTitles(String sql, ArrayList arrayList) {
+        ResultSet resultSet;
         try (Connection conn = this.connect();
              PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
             resultSet = preparedStatement.executeQuery();
@@ -718,23 +724,13 @@ public class DatabaseOperations {
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
-        return arrayList;
     }
+
     public ArrayList loadAllProjectTitles() {
         String sql = "SELECT * FROM PROJECTS WHERE TRASH=0 ";
         ResultSet resultSet;
         ArrayList arrayList = new ArrayList();
-        try (Connection conn = this.connect();
-             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                String name = resultSet.getString("NAME");
-                int id = resultSet.getInt("ID");
-                arrayList.add(name);
-            }
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
+        projectTitles(sql, arrayList);
         return arrayList;
     }
 
@@ -742,23 +738,20 @@ public class DatabaseOperations {
         String sql = "SELECT * FROM NOTES WHERE TRASHED=0 AND LOCKED=0";
         ResultSet resultSet;
         ArrayList arrayList = new ArrayList();
-        try (Connection conn = this.connect();
-             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                String title = resultSet.getString("TITLE");
-                int id = resultSet.getInt("ID");
-                arrayList.add(title);
-            }
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
+        noteTitles(sql, arrayList);
         return arrayList;
     }
- public ArrayList loadAllNoteTitles() {
+
+    public ArrayList loadAllNoteTitles() {
         String sql = "SELECT * FROM NOTES WHERE TRASHED=0";
         ResultSet resultSet;
         ArrayList arrayList = new ArrayList();
+        noteTitles(sql, arrayList);
+        return arrayList;
+    }
+
+    private void noteTitles(String sql, ArrayList arrayList) {
+        ResultSet resultSet;
         try (Connection conn = this.connect();
              PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
             resultSet = preparedStatement.executeQuery();
@@ -770,7 +763,6 @@ public class DatabaseOperations {
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
-        return arrayList;
     }
 
     public int getItemId(String name) {
@@ -1030,5 +1022,36 @@ public class DatabaseOperations {
             e.getMessage();
         }
 
+    }
+
+    public boolean isProjectExists(String name) {
+        String sql = "SELECT NAME FROM PROJECTS WHERE NAME=?";
+        if (isExists(name, sql)) return true;
+        return false;
+    }
+    public boolean isNoteExists(String title) {
+        String sql = "SELECT TITLE FROM NOTES WHERE TITLE=?";
+        if (isExists(title, sql)) return true;
+        return false;
+    }
+
+    private boolean isExists(String title, String sql) {
+        try (Connection connection = this.connect();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, title);
+            ResultSet resultSet = preparedStatement.executeQuery();
+            if(resultSet.next()){
+                return true;
+            }
+        } catch (SQLException e) {
+            e.getMessage();
+        }
+        return false;
+    }
+
+    public boolean isTaskExists(String name) {
+        String sql = "SELECT NAME FROM TASKS WHERE NAME=? ";
+        if (isExists(name, sql)) return true;
+        return false;
     }
 }
