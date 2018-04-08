@@ -1,0 +1,34 @@
+Warn User when leaving editing notes without saving
+
+
+
+
+
+
+
+
+
+
+
+
+Add shortcut to menus
+
+
+
+
+
+
+Ctrl+P-new project
+Ctrl+N-new note
+Ctrl+Shift+P-projects trash
+Ctrl+Shift+N-notes trash
+Ctrl+Shift+T-tasks trash
+Ctrl+F-Search textfield
+Ctrl+T-Switch Tabs
+Ctrl+Q-quit
+Ctrl+S-Save note
+Shift+delete-delete sth permanently
+delete-delete selected items
+Ctrl+R-restore
+Ctrl+K-List of all Shortcuts
+Ctrl+I- app infor-name,language,developer, email, github account

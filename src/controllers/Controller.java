@@ -9,8 +9,10 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.Button;
@@ -23,7 +25,11 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldListCell;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
+import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.scene.web.HTMLEditor;
@@ -75,6 +81,8 @@ public class Controller {
     private ProgressBar progressBar;
     @FXML
     private VBox metaBox;
+    @FXML
+    private AnchorPane mainAnchor;
 
     private String projectDescriptionText = "";
     private ArrayList projectsArrayList;
@@ -91,6 +99,173 @@ public class Controller {
 
     @FXML
     public void initialize() {
+
+        /*
+        add shortcuts to the app
+         */
+        //new project
+        mainAnchor.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+            if (new KeyCodeCombination(KeyCode.P, KeyCombination.CONTROL_DOWN).match(event)) {
+                onCreateNewProject();
+            }
+        });
+        //about app
+        mainAnchor.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+            if (new KeyCodeCombination(KeyCode.I, KeyCombination.CONTROL_DOWN).match(event)) {
+                aboutApp();
+            }
+        });
+        //keyboard shortcuts
+        mainAnchor.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+            if (new KeyCodeCombination(KeyCode.K, KeyCombination.CONTROL_DOWN).match(event)) {
+                appShortcuts();
+            }
+        });
+        //new note
+        mainAnchor.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+            if (new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN).match(event)) {
+                onCreateNewNote();
+            }
+        });
+        //projects trash
+        mainAnchor.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+            if (new KeyCodeCombination(KeyCode.P, KeyCombination.SHIFT_DOWN, KeyCombination.CONTROL_DOWN).match(event)) {
+                viewTrashedProjects();
+            }
+        });
+        //notes trash
+        mainAnchor.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+            if (new KeyCodeCombination(KeyCode.N, KeyCombination.SHIFT_DOWN, KeyCombination.CONTROL_DOWN).match(event)) {
+                viewTrashedNotes();
+            }
+        });
+        //tasks trash
+        mainAnchor.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+            if (new KeyCodeCombination(KeyCode.T, KeyCombination.SHIFT_DOWN, KeyCombination.CONTROL_DOWN).match(event)) {
+                viewTrashedTasks();
+            }
+        });
+        //request focus on search textfield
+        mainAnchor.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+            if (new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN).match(event)) {
+                searchTitles.requestFocus();
+            }
+        });
+        //switch tabs
+        mainAnchor.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+            if (new KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN).match(event)) {
+                if (tabPane.getSelectionModel().isSelected(1))
+                    tabPane.getSelectionModel().selectFirst();
+                else
+                    tabPane.getSelectionModel().selectLast();
+
+            }
+        });
+        //Quit app
+        mainAnchor.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+            if (new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN).match(event)) {
+                System.exit(0);
+            }
+        });
+        //permanently delete a project
+        projectTitles.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+            if (new KeyCodeCombination(KeyCode.DELETE, KeyCombination.SHIFT_DOWN).match(event)) {
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("Confirm Deletion");
+                alert.setContentText("This operation cannot be undone");
+                if (projectTitles.getSelectionModel().getSelectedItems().size() > 1) {
+                    alert.setHeaderText("Are you sure you want to permanently delete " + projectTitles.getSelectionModel().getSelectedItems().size() + " projects");
+                } else {
+                    alert.setHeaderText("Are you sure you want to permanently delete '" + projectTitles.getSelectionModel().getSelectedItem() + "'?");
+                }
+                Optional<ButtonType> result = alert.showAndWait();
+                if (result.get() == ButtonType.OK) {
+                    if (projectTitles.getSelectionModel().getSelectedItems().size() > 1) {
+                        ObservableList items = projectTitles.getSelectionModel().getSelectedItems();
+                        for (Object item : items) {
+                            databaseOperations.eraseProject(item.toString());
+                        }
+                    } else {
+                        databaseOperations.eraseProject(projectTitles.getSelectionModel().getSelectedItem().toString());
+                    }
+                    fetchProjectTitles();
+                    projectTitles.getSelectionModel().selectFirst();
+                }
+
+
+            } else if (event.getCode() == KeyCode.DELETE) {
+                confirmTrashingProject();
+            }
+        });
+        //permanently delete a note
+        noteTitles.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+            if (new KeyCodeCombination(KeyCode.DELETE, KeyCombination.SHIFT_DOWN).match(event)) {
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("Confirm Deletion");
+                alert.setContentText("This operation cannot be undone");
+                if (noteTitles.getSelectionModel().getSelectedItems().size() > 1) {
+                    alert.setHeaderText("Are you sure you want to permanently delete " + noteTitles.getSelectionModel().getSelectedItems().size() + " notes");
+                } else {
+                    alert.setHeaderText("Are you sure you want to permanently delete '" + noteTitles.getSelectionModel().getSelectedItem() + "'?");
+                }
+                Optional<ButtonType> result = alert.showAndWait();
+                if (result.get() == ButtonType.OK) {
+                    if (noteTitles.getSelectionModel().getSelectedItems().size() > 1) {
+                        ObservableList items = noteTitles.getSelectionModel().getSelectedItems();
+                        for (Object item : items) {
+                            databaseOperations.eraseNote(item.toString());
+                        }
+                    } else {
+                        databaseOperations.eraseNote(noteTitles.getSelectionModel().getSelectedItem().toString());
+                    }
+                    fetchNoteTitles();
+                    noteTitles.getSelectionModel().selectFirst();
+                }
+
+
+            } else if (event.getCode() == KeyCode.DELETE) {
+                confirmTrashingNote();
+            }
+        });
+//permanently delete a task
+        tasksTable.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+            if (new KeyCodeCombination(KeyCode.DELETE, KeyCombination.SHIFT_DOWN).match(event)) {
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("Confirm Deletion");
+                alert.setContentText("This operation cannot be undone");
+                if (tasksTable.getSelectionModel().getSelectedItems().size() > 1) {
+                    alert.setHeaderText("Are you sure you want to permanently delete " + tasksTable.getSelectionModel().getSelectedItems().size() + " tasks");
+                } else {
+                    Task selectedTask = (Task) tasksTable.getSelectionModel().getSelectedItem();
+                    alert.setHeaderText("Are you sure you want to permanently delete '" + selectedTask.getTaskName() + "'?");
+                }
+                Optional<ButtonType> result = alert.showAndWait();
+                if (result.get() == ButtonType.OK) {
+                    if (tasksTable.getSelectionModel().getSelectedItems().size() > 1) {
+                        ObservableList items = tasksTable.getSelectionModel().getSelectedItems();
+                        for (Object item : items) {
+                            Task selectedTask = (Task) item;
+                            databaseOperations.eraseTask(selectedTask.getTaskName());
+                        }
+                    } else {
+                        Task selectedTask = (Task) tasksTable.getSelectionModel().getSelectedItem();
+                        databaseOperations.eraseTask(selectedTask.getTaskName());
+                    }
+                    fetchProjectTasks();
+                    tasksTable.getSelectionModel().selectFirst();
+                }
+
+            } else if (event.getCode() == KeyCode.DELETE) {
+                confirmTrashingTask();
+            }
+        });
+        //Save note
+        noteBody.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+            if (new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN).match(event)) {
+                saveNote();
+            }
+        });
+
         fetchNoteTitles();
         fetchProjectTitles();
     }
@@ -110,7 +285,7 @@ public class Controller {
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
-        grid.setPadding(new Insets(20, 10, 10, 10));
+        grid.setPadding(new Insets(12, 10, 10, 10));
         TextField title = new TextField();
         title.setPromptText("Title");
         title.setPrefWidth(340);
@@ -165,7 +340,7 @@ public class Controller {
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
-        grid.setPadding(new Insets(20, 10, 10, 10));
+        grid.setPadding(new Insets(12, 10, 10, 10));
         TextField title = new TextField();
         title.setPromptText("Title");
         title.setPrefWidth(340);
@@ -220,7 +395,6 @@ public class Controller {
                 projectTitles.setCellFactory(TextFieldListCell.forListView());
                 projectTitles.setOnEditCommit((EventHandler<ListView.EditEvent<String>>) t -> {
                     if (!t.getNewValue().isEmpty()) {
-
                         String oldValue = projectTitles.getSelectionModel().getSelectedItem().toString();
                         projectTitles.getItems().set(t.getIndex(), t.getNewValue());
                         databaseOperations.editProjectName(oldValue, t.getNewValue().toString());
@@ -244,41 +418,13 @@ public class Controller {
         projectTitles.setCellFactory(lv -> {
             ListCell<String> cell = new ListCell<>();
             ContextMenu contextMenu = new ContextMenu();
-            MenuItem viewDetailsItem = new MenuItem();
-            viewDetailsItem.textProperty().bind(Bindings.format("View Details", cell.itemProperty()));
-            viewDetailsItem.setOnAction(event -> {
-                String item = cell.getItem();
-                // code to edit item...
-            });
             MenuItem deleteItem = new MenuItem();
             deleteItem.textProperty().bind(Bindings.format("Delete", cell.itemProperty()));
             deleteItem.setOnAction(event -> {
-                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-                alert.setTitle("Confirm Deletion");
-                if (projectTitles.getSelectionModel().getSelectedItems().size() > 1) {
-                    alert.setHeaderText("Are you sure you want to move " + projectTitles.getSelectionModel().getSelectedItems().size() + " projects to trash?");
-                } else {
-                    alert.setHeaderText("Are you sure you want to move '" + cell.getItem() + "' to trash?");
-                }
-                alert.setContentText("This project will trashed");
-                Optional<ButtonType> result = alert.showAndWait();
-                if (result.get() == ButtonType.OK) {
-                    if (projectTitles.getSelectionModel().getSelectedItems().size() > 1) {
-                        System.out.println(projectTitles.getSelectionModel().getSelectedItems());
-                        ObservableList items = projectTitles.getSelectionModel().getSelectedItems();
-                        for (Object item : items) {
-                            databaseOperations.trashProject(item.toString());
-                        }
-                    } else {
-
-                        databaseOperations.trashProject(cell.getItem());
-                    }
-                    projectTitles.getSelectionModel().selectFirst();
-                    fetchProjectTitles();
-                }
+                confirmTrashingProject(cell);
 
             });
-            contextMenu.getItems().addAll(viewDetailsItem, deleteItem);
+            contextMenu.getItems().addAll(deleteItem);
             cell.textProperty().bind(cell.itemProperty());
             cell.emptyProperty().addListener((obs, wasEmpty, isNowEmpty) -> {
                 if (isNowEmpty) {
@@ -289,6 +435,110 @@ public class Controller {
             });
             return cell;
         });
+    }
+
+    private void confirmTrashingProject(ListCell<String> cell) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirm Deletion");
+        if (projectTitles.getSelectionModel().getSelectedItems().size() > 1) {
+            alert.setHeaderText("Are you sure you want to move " + projectTitles.getSelectionModel().getSelectedItems().size() + " projects to trash?");
+        } else {
+            alert.setHeaderText("Are you sure you want to move '" + cell.getItem() + "' to trash?");
+        }
+        alert.setContentText("This project will trashed");
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.get() == ButtonType.OK) {
+            deleteProject(cell);
+            fetchProjectTitles();
+            projectTitles.getSelectionModel().selectFirst();
+        }
+    }
+
+    private void confirmTrashingProject() {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirm Deletion");
+        if (projectTitles.getSelectionModel().getSelectedItems().size() > 1) {
+            alert.setHeaderText("Are you sure you want to move " + projectTitles.getSelectionModel().getSelectedItems().size() + " projects to trash?");
+        } else {
+            alert.setHeaderText("Are you sure you want to move '" + projectTitles.getSelectionModel().getSelectedItem() + "' to trash?");
+        }
+        alert.setContentText("This project will trashed");
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.get() == ButtonType.OK) {
+            if (projectTitles.getSelectionModel().getSelectedItems().size() > 1) {
+                ObservableList items = projectTitles.getSelectionModel().getSelectedItems();
+                for (Object item : items) {
+                    databaseOperations.trashProject(item.toString());
+                }
+            } else {
+                databaseOperations.trashProject(projectTitles.getSelectionModel().getSelectedItem().toString());
+            }
+            fetchProjectTitles();
+            projectTitles.getSelectionModel().selectFirst();
+        }
+    }
+
+    private void confirmTrashingNote() {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirm Deletion");
+        if (noteTitles.getSelectionModel().getSelectedItems().size() > 1) {
+            alert.setHeaderText("Are you sure you want to move " + noteTitles.getSelectionModel().getSelectedItems().size() + " notes to trash?");
+        } else {
+            alert.setHeaderText("Are you sure you want to move '" + noteTitles.getSelectionModel().getSelectedItem() + "' to trash?");
+        }
+        alert.setContentText("This note will trashed");
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.get() == ButtonType.OK) {
+            if (noteTitles.getSelectionModel().getSelectedItems().size() > 1) {
+                ObservableList items = noteTitles.getSelectionModel().getSelectedItems();
+                for (Object item : items) {
+                    databaseOperations.trashNote(item.toString());
+                }
+            } else {
+                databaseOperations.trashNote(noteTitles.getSelectionModel().getSelectedItem().toString());
+            }
+            fetchNoteTitles();
+            noteTitles.getSelectionModel().selectFirst();
+        }
+    }
+
+    private void confirmTrashingTask() {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirm Deletion");
+        alert.setContentText("This operation cannot be undone");
+        if (tasksTable.getSelectionModel().getSelectedItems().size() > 1) {
+            alert.setHeaderText("Are you sure you want to move " + tasksTable.getSelectionModel().getSelectedItems().size() + " tasks to trash");
+        } else {
+            Task selectedTask = (Task) tasksTable.getSelectionModel().getSelectedItem();
+            alert.setHeaderText("Are you sure you want to move '" + selectedTask.getTaskName() + "' to trash?");
+        }
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.get() == ButtonType.OK) {
+            if (tasksTable.getSelectionModel().getSelectedItems().size() > 1) {
+                ObservableList items = tasksTable.getSelectionModel().getSelectedItems();
+                for (Object item : items) {
+                    Task selectedTask = (Task) item;
+                    databaseOperations.trashTask(selectedTask.getTaskName());
+                }
+            } else {
+                Task selectedTask = (Task) tasksTable.getSelectionModel().getSelectedItem();
+                databaseOperations.trashTask(selectedTask.getTaskName());
+            }
+            fetchProjectTasks();
+            noteTitles.getSelectionModel().selectFirst();
+
+        }
+    }
+
+    private void deleteProject(ListCell<String> cell) {
+        if (projectTitles.getSelectionModel().getSelectedItems().size() > 1) {
+            ObservableList items = projectTitles.getSelectionModel().getSelectedItems();
+            for (Object item : items) {
+                databaseOperations.trashProject(item.toString());
+            }
+        } else {
+            databaseOperations.trashProject(cell.getItem());
+        }
     }
 
     /**
@@ -331,13 +581,6 @@ public class Controller {
             ListCell<String> cell = new ListCell<>();
             ContextMenu contextMenu = new ContextMenu();
 
-            MenuItem viewDetailsItem = new MenuItem();
-            viewDetailsItem.textProperty().bind(Bindings.format("View Details", cell.itemProperty()));
-            viewDetailsItem.setOnAction(event -> {
-                String item = cell.getItem();
-                // code to edit item...
-            });
-
             MenuItem deleteItem = new MenuItem();
             deleteItem.textProperty().bind(Bindings.format("Delete", cell.itemProperty()));
             deleteItem.setOnAction(event -> {
@@ -364,7 +607,8 @@ public class Controller {
                 }
 
             });
-            contextMenu.getItems().addAll(viewDetailsItem, deleteItem);
+
+            contextMenu.getItems().addAll(deleteItem);
             cell.textProperty().bind(cell.itemProperty());
             cell.emptyProperty().addListener((obs, wasEmpty, isNowEmpty) -> {
                 if (isNowEmpty) {
@@ -403,6 +647,7 @@ public class Controller {
             notesPane.setDisable(true);
             metaBox.setVisible(true);
             projectAccordion.setExpandedPane(tasksPane);
+            projectTitles.getSelectionModel().clearSelection();
             projectTitles.getSelectionModel().selectFirst();
 //            if (!projectTitles.getSelectionModel().getSelectedItem().toString().equals("0 Results found")){
             onProjectClicked();
@@ -418,6 +663,7 @@ public class Controller {
             tasksPane.setDisable(true);
             notesPane.setDisable(false);
             metaBox.setVisible(false);
+            projectTitles.getSelectionModel().clearSelection();
             noteTitles.getSelectionModel().selectFirst();
 
             onNoteClicked();
@@ -682,6 +928,7 @@ public class Controller {
         } catch (Exception e) {
             e.printStackTrace();
         }
+
         taskName.setCellFactory(lv -> {
             TableCell<Task, String> cell = new TableCell<>();
             ContextMenu contextMenu = new ContextMenu();
@@ -850,7 +1097,54 @@ public class Controller {
             e.printStackTrace();
         }
         projectsTrash.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+//permanently delete a task
+        projectsTrash.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+            if (new KeyCodeCombination(KeyCode.DELETE, KeyCombination.SHIFT_DOWN).match(event)) {
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("Confirm Deletion");
+                alert.setContentText("This operation cannot be undone");
+                if (projectsTrash.getSelectionModel().getSelectedItems().size() > 1) {
+                    alert.setHeaderText("Are you sure you want to permanently delete " + projectsTrash.getSelectionModel().getSelectedItems().size() + " projects?");
+                } else {
+                    TrashedProjects selectedProject = (TrashedProjects) projectsTrash.getSelectionModel().getSelectedItem();
+                    alert.setHeaderText("Are you sure you want to permanently delete '" + selectedProject.getProjectName() + "'?");
+                }
+                Optional<ButtonType> result = alert.showAndWait();
+                if (result.get() == ButtonType.OK) {
+                    if (projectsTrash.getSelectionModel().getSelectedItems().size() > 1) {
+                        ObservableList items = projectsTrash.getSelectionModel().getSelectedItems();
+                        for (Object item : items) {
+                            TrashedProjects selectedProject = (TrashedProjects) item;
+                            databaseOperations.eraseProject(selectedProject.getProjectName());
+                        }
+                    } else {
+                        TrashedProjects selectedProject = (TrashedProjects) projectsTrash.getSelectionModel().getSelectedItem();
+                        databaseOperations.eraseProject(selectedProject.getProjectName());
+                    }
+                    projectsTrashTable(stage);
+                }
+            } else if (new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN).match(event)) {
+                if (projectsTrash.getSelectionModel().getSelectedItems().size() > 1) {
+                    ObservableList items = projectsTrash.getSelectionModel().getSelectedItems();
+                    for (Object item : items) {
+                        TrashedProjects selectedProject = (TrashedProjects) item;
+                        databaseOperations.restoreProject(selectedProject.getProjectName());
+                    }
+                } else {
+                    TrashedProjects selectedProject = (TrashedProjects) projectsTrash.getSelectionModel().getSelectedItem();
+                    databaseOperations.restoreProject(selectedProject.getProjectName());
+                }
 
+                projectsTrashTable(stage);
+                tabPane.getSelectionModel().selectFirst();
+                fetchProjectTitles();
+                if (projectsTrash.getSelectionModel().getSelectedItem() != null) {
+                    TrashedProjects selectedTask = (TrashedProjects) projectsTrash.getSelectionModel().getSelectedItem();
+                    projectTitles.getSelectionModel().select(selectedTask.getProjectName());
+                    onProjectClicked();
+                }
+            }
+        });
         trashProjectName.setCellFactory(lv -> {
             TableCell<TrashedProjects, String> cell = new TableCell<>();
             ContextMenu contextMenu = new ContextMenu();
@@ -977,6 +1271,54 @@ public class Controller {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        //permanently delete a task
+        notesTrash.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+            if (new KeyCodeCombination(KeyCode.DELETE, KeyCombination.SHIFT_DOWN).match(event)) {
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("Confirm Deletion");
+                alert.setContentText("This operation cannot be undone");
+                if (notesTrash.getSelectionModel().getSelectedItems().size() > 1) {
+                    alert.setHeaderText("Are you sure you want to permanently delete " + notesTrash.getSelectionModel().getSelectedItems().size() + " notes?");
+                } else {
+                    TrashedNotes selectedProject = (TrashedNotes) notesTrash.getSelectionModel().getSelectedItem();
+                    alert.setHeaderText("Are you sure you want to permanently delete '" + selectedProject.getNoteName() + "'?");
+                }
+                Optional<ButtonType> result = alert.showAndWait();
+                if (result.get() == ButtonType.OK) {
+                    if (notesTrash.getSelectionModel().getSelectedItems().size() > 1) {
+                        ObservableList items = notesTrash.getSelectionModel().getSelectedItems();
+                        for (Object item : items) {
+                            TrashedNotes selectedProNote = (TrashedNotes) item;
+                            databaseOperations.eraseNote(selectedProNote.getNoteName());
+                        }
+                    } else {
+                        TrashedNotes selectedProNote = (TrashedNotes) notesTrash.getSelectionModel().getSelectedItem();
+                        databaseOperations.eraseNote(selectedProNote.getNoteName());
+                    }
+                    notesTrashTable(stage);
+                }
+            } else if (new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN).match(event)) {
+                if (notesTrash.getSelectionModel().getSelectedItems().size() > 1) {
+                    ObservableList items = notesTrash.getSelectionModel().getSelectedItems();
+                    for (Object item : items) {
+                        TrashedNotes selectedNote = (TrashedNotes) item;
+                        databaseOperations.restoreNote(selectedNote.getNoteName());
+                    }
+                } else {
+                    TrashedNotes selectedNote = (TrashedNotes) notesTrash.getSelectionModel().getSelectedItem();
+                    databaseOperations.restoreNote(selectedNote.getNoteName());
+                }
+
+                tabPane.getSelectionModel().selectLast();
+                notesTrashTable(stage);
+                fetchNoteTitles();
+                if (notesTrash.getSelectionModel().getSelectedItem() != null) {
+                    TrashedNotes selectedNote = (TrashedNotes) notesTrash.getSelectionModel().getSelectedItem();
+                    projectTitles.getSelectionModel().select(selectedNote.getNoteName());
+                    onNoteClicked();
+                }
+            }
+        });
         notesTrash.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         trashNoteName.setCellFactory(lv -> {
             TableCell<TrashedNotes, String> cell = new TableCell<>();
@@ -1109,6 +1451,54 @@ public class Controller {
             e.printStackTrace();
         }
         tasksTrash.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        //permanently delete a task
+        tasksTrash.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
+            if (new KeyCodeCombination(KeyCode.DELETE, KeyCombination.SHIFT_DOWN).match(event)) {
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("Confirm Deletion");
+                alert.setContentText("This operation cannot be undone");
+                if (tasksTrash.getSelectionModel().getSelectedItems().size() > 1) {
+                    alert.setHeaderText("Are you sure you want to permanently delete " + tasksTrash.getSelectionModel().getSelectedItems().size() + " tasks");
+                } else {
+                    TrashedTasks selectedTask = (TrashedTasks) tasksTrash.getSelectionModel().getSelectedItem();
+                    alert.setHeaderText("Are you sure you want to permanently delete '" + selectedTask.getTaskName() + "'?");
+                }
+                Optional<ButtonType> result = alert.showAndWait();
+                if (result.get() == ButtonType.OK) {
+                    if (tasksTrash.getSelectionModel().getSelectedItems().size() > 1) {
+                        ObservableList items = tasksTrash.getSelectionModel().getSelectedItems();
+                        for (Object item : items) {
+                            TrashedTasks selectedTask = (TrashedTasks) item;
+                            databaseOperations.eraseTask(selectedTask.getTaskName());
+                        }
+                    } else {
+                        TrashedTasks selectedTask = (TrashedTasks) tasksTrash.getSelectionModel().getSelectedItem();
+                        databaseOperations.eraseTask(selectedTask.getTaskName());
+                    }
+                    trashTasksTable(stage);
+                }
+            } else if (new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN).match(event)) {
+                if (tasksTrash.getSelectionModel().getSelectedItems().size() > 1) {
+                    ObservableList items = tasksTrash.getSelectionModel().getSelectedItems();
+                    for (Object item : items) {
+                        TrashedTasks selectedTask = (TrashedTasks) item;
+                        databaseOperations.restoreTask(selectedTask.getTaskName());
+                    }
+                } else {
+                    TrashedTasks selectedTask = (TrashedTasks) tasksTrash.getSelectionModel().getSelectedItem();
+                    databaseOperations.restoreTask(selectedTask.getTaskName());
+                }
+
+                tabPane.getSelectionModel().selectFirst();
+                trashTasksTable(stage);
+                fetchProjectTitles();
+                if (tasksTrash.getSelectionModel().getSelectedItem() != null) {
+                    TrashedTasks selectedTask = (TrashedTasks) tasksTrash.getSelectionModel().getSelectedItem();
+                    projectTitles.getSelectionModel().select(selectedTask.getProjectName());
+                    onProjectClicked();
+                }
+            }
+        });
         trashTaskName.setCellFactory(lv -> {
             TableCell<TrashedTasks, String> cell = new TableCell<>();
             ContextMenu contextMenu = new ContextMenu();
@@ -1196,6 +1586,155 @@ public class Controller {
         tasksTrash.setPrefSize(750, 500);
         root.getChildren().addAll(tasksTrash, buttonBar);
         stage.setScene(new Scene(root, 772, 521));
+    }
+
+    public void aboutApp() {
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(10, 10, 10, 10));
+
+        Text name = new Text("App name:");
+        name.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        grid.add(name, 0, 0);
+        Text projo = new Text("Projo");
+        grid.add(projo, 1, 0, 2, 1);
+        Text use = new Text("Use:");
+        use.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        grid.add(use, 0, 1);
+        Text projects = new Text("Manage personal projects and take notes");
+        grid.add(projects, 1, 1, 2, 1);
+        Text language = new Text("Language:");
+        language.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        grid.add(language, 0, 2);
+        Text java = new Text("Java");
+        grid.add(java, 1, 2, 2, 1);
+        Text developer = new Text("Developer:");
+        developer.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        grid.add(developer, 0, 3);
+        Text me = new Text("Nahashon Njenga");
+        grid.add(me, 1, 3, 2, 1);
+        Text email = new Text("Email:");
+        email.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        grid.add(email, 0, 4);
+        Text ncubed = new Text("ncubed940@gmail.com");
+        grid.add(ncubed, 1, 4, 2, 1);
+        Text sourceCode = new Text("Source Code:");
+        grid.add(sourceCode, 0, 5);
+        Hyperlink source = new Hyperlink("GitHub");
+        source.setOnAction(e -> {
+            viewSourceCode();
+        });
+        grid.add(source, 1, 5, 2, 1);
+        sourceCode.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        Button close = new Button("Close");
+        grid.add(close, 1, 6, 2, 1);
+
+        Stage stage = new Stage();
+        close.setOnAction(e -> {
+            stage.close();
+        });
+        stage.setTitle("About Projo");
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.setResizable(false);
+        stage.setScene(new Scene(grid));
+        stage.showAndWait();
+    }
+
+    public void appShortcuts() {
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(10, 10, 10, 10));
+
+        Text project = new Text("Ctrl+P:");
+        project.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        grid.add(project, 0, 0);
+        Text newProject = new Text("Create new Project");
+        grid.add(newProject, 1, 0, 2, 1);
+        Text note = new Text("Ctrl+N:");
+        note.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        grid.add(note, 0, 1);
+        Text newNote = new Text("Create new Note");
+        grid.add(newNote, 1, 1, 2, 1);
+        Text trashedProjects = new Text("Ctrl+Shift+P:");
+        trashedProjects.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        grid.add(trashedProjects, 0, 2);
+        Text projectsTrash = new Text("View trashed projects");
+        grid.add(projectsTrash, 1, 2, 2, 1);
+        Text trashedNotes = new Text("Ctrl+Shift+N:");
+        trashedNotes.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        grid.add(trashedNotes, 0, 3);
+        Text notesTrash = new Text("View trashed Notes");
+        grid.add(notesTrash, 1, 3, 2, 1);
+        Text trashedTasks = new Text("Ctrl+Shift+T:");
+        trashedTasks.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        grid.add(trashedTasks, 0, 4);
+        Text tasksTrash = new Text("View Trashed Tasks");
+        grid.add(tasksTrash, 1, 4, 2, 1);
+        Text find = new Text("Ctrl+F:");
+        grid.add(find, 0, 5);
+        find.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        Text search = new Text("Request focus on the search field");
+        grid.add(search, 1, 5, 2, 1);
+        Text tab = new Text("Ctrl+T:");
+        tab.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        grid.add(tab, 0, 6);
+        Text tabbing = new Text("Switch between project and notes tab");
+        grid.add(tabbing, 1, 6, 2, 1);
+        Text quit = new Text("Ctrl+Q:");
+        quit.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        grid.add(quit, 0, 7);
+        Text quitting = new Text("Quit app");
+        grid.add(quitting, 1, 7, 2, 1);
+        Text save = new Text("Ctrl+S:");
+        save.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        grid.add(save, 0, 8);
+        Text saving = new Text("Save note while editing");
+        grid.add(saving, 1, 8, 2, 1);
+        Text delete = new Text("Delete:");
+        delete.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        grid.add(delete, 0, 9);
+        Text deleting = new Text("Trash the selected item(s)");
+        grid.add(deleting, 1, 9, 2, 1);
+        Text erase = new Text("Shift+Delete:");
+        erase.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        grid.add(erase, 0, 10);
+        Text erasing = new Text("Permanently delete selected item(s)");
+        grid.add(erasing, 1, 10, 2, 1);
+        Text restore = new Text("Ctrl+R:");
+        restore.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        grid.add(restore, 0, 11);
+        Text restoring = new Text("Restore selected item(s)");
+        grid.add(restoring, 1, 11, 2, 1);
+        Text info = new Text("Ctrl+I:");
+        info.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        grid.add(info, 0, 12);
+        Text about = new Text("View information about the app");
+        grid.add(about, 1, 12, 2, 1);
+        Text shortcut = new Text("Ctrl+K:");
+        shortcut.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        grid.add(shortcut, 0, 13);
+        Text keyboardShortcuts = new Text("View keyboard shortcuts");
+        grid.add(keyboardShortcuts, 1, 13, 2, 1);
+Text etc = new Text("Others:");
+        etc.setFont(javafx.scene.text.Font.font("Helvetica", FontWeight.BOLD, 12));
+        grid.add(etc, 0, 13);
+        Text others = new Text("Other Operating Systems Shortcuts may work");
+        grid.add(others, 1, 13, 2, 1);
+
+        Button close = new Button("Close");
+        grid.add(close, 1, 14, 2, 1);
+
+        Stage stage = new Stage();
+        close.setOnAction(e -> {
+            stage.close();
+        });
+        stage.setTitle("About Projo");
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.setResizable(false);
+        stage.setScene(new Scene(grid));
+        stage.showAndWait();
     }
 
 
