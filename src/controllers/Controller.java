@@ -49,9 +49,8 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.sql.Date;
 import java.time.LocalDate;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -95,7 +94,7 @@ public class Controller {
     private String projectDescriptionText = "";
     private ArrayList projectsArrayList;
     private ArrayList notesArrayList;
-    private Tooltip tooltip=new Tooltip("A task with such name already exists ");
+    private Tooltip tooltip = new Tooltip("A task with such name already exists ");
 
     private String itemName = "";
     private int itemId = 0;
@@ -1045,11 +1044,10 @@ public class Controller {
     public void addProjectTask() {
         if (!newTaskTextField.getText().trim().isEmpty()) {
             if (databaseOperations.isTaskExists(newTaskTextField.getText().trim())) {
-                System.out.println("task exists");
                 Point2D p = newTaskTextField.localToScene(0.0, 0.0);
-                tooltip.show(newTaskTextField,p.getX()
+                tooltip.show(newTaskTextField, p.getX()
                         + newTaskTextField.getScene().getX() + newTaskTextField.getScene().getWindow().getX(), p.getY()
-                        + newTaskTextField.getScene().getY() + newTaskTextField.getScene().getWindow().getY()+newTaskTextField.getHeight()+2);
+                        + newTaskTextField.getScene().getY() + newTaskTextField.getScene().getWindow().getY() + newTaskTextField.getHeight() + 2);
                 saveNewTask.setDisable(true);
 //                tooltip.hide();
             } else {
@@ -1203,8 +1201,16 @@ public class Controller {
 
     //disable and enable save button when typing
     public void onTypingNoteBody() {
+        Timer timer = new Timer();
         if (!noteBody.getHtmlText().trim().isEmpty()) {
             saveNoteBody.setDisable(false);
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    saveNote();
+                    saveNoteBody.setDisable(true);
+                }
+            }, 1000);
         } else {
             saveNoteBody.setDisable(true);
         }
