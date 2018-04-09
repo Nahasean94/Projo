@@ -762,6 +762,7 @@ public class Controller {
         }
         try {
             ObservableList observableList = FXCollections.observableArrayList(reverse(notesArrayList));
+
             noteTitles.setCellFactory(TextFieldListCell.forListView());
             notesTab.setText("Notes (" + notesArrayList.size() + ")");
             noteTitles.setOnEditCommit((EventHandler<ListView.EditEvent<String>>) t -> {
@@ -1204,6 +1205,7 @@ public class Controller {
         Timer timer = new Timer();
         if (!noteBody.getHtmlText().trim().isEmpty()) {
             saveNoteBody.setDisable(false);
+            //auto save after every 1 Second
             timer.schedule(new TimerTask() {
                 @Override
                 public void run() {

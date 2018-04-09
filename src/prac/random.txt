@@ -1,5 +1,2 @@
-
-User feedback
-Warn User when leaving editing notes without saving
-Cannot save two notes,projects tasks with the same name
+ 
 
